@@ -41,7 +41,15 @@
   <!-- ================= SIGN-IN PANEL ================= -->
   <section class="auth-panel">
     <div class="auth-card">
-      <h1>Welcome back</h1>
+      
+      <!-- Theme Toggle Button Header Row -->
+      <div class="row between" style="margin-bottom: 0.5rem;">
+        <h1>Welcome back</h1>
+        <button type="button" class="btn btn-outline btn-sm" id="themeToggleBtn" title="Toggle theme">
+          &#127769; Theme
+        </button>
+      </div>
+      
       <p class="muted small" style="margin-bottom:1.2rem">Sign in to report an issue or manage your ward.</p>
 
       <div class="alert" id="loginAlert"></div>
@@ -103,8 +111,22 @@
 <script src="app.js"></script>
 <script>
 (function () {
-  CF.seed();                       // make sure demo issues exist
+  CF.seed();                   // make sure demo issues exist
   var role = "citizen";
+
+  /* -------- theme toggle handler -------- */
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  const themeBtn = CF.$("#themeToggleBtn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+  }
 
   /* -------- demo role switch -------- */
   CF.$$("#roleSeg button").forEach(function (b) {
@@ -164,8 +186,8 @@
 
   /* -------- placeholder links -------- */
   [["#forgotLink", "Password reset", "A reset link would be emailed to you."],
-   ["#createLink", "Create account", "Self-signup flow is out of scope for this prototype."],
-   [".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
+    ["#createLink", "Create account", "Self-signup flow is out of scope for this prototype."],
+    [".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
   .forEach(function (pair) {
     CF.$$(pair[0]).forEach(function (el) {
       el.addEventListener("click", function (e) {

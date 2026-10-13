@@ -10,6 +10,11 @@
   var KEY_SESSION = "civicfix.session.v1";
   var STATUSES    = ["New", "Assigned", "In Progress", "Closed"];
 
+  /* ============================================================== theme init */
+  // Apply saved theme immediately on script load to prevent flashing
+  var savedTheme = localStorage.getItem("theme") || "light";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+
   /* ============================================================== storage */
   function seed(force) {
     var cur = null;
@@ -172,7 +177,7 @@
   }
   function statusClass(status) {
     return ({ "New": "badge-new", "Assigned": "badge-assigned",
-              "In Progress": "badge-progress", "Closed": "badge-closed" })[status] || "badge-new";
+            "In Progress": "badge-progress", "Closed": "badge-closed" })[status] || "badge-new";
   }
   function badge(status) {
     return '<span class="badge ' + statusClass(status) + '">' + escapeHtml(status) + "</span>";
@@ -262,7 +267,6 @@
   }
 
   /* ==================================================== image file reading */
-  /* Reads a File, downscales it on a canvas, returns a small JPEG data URL. */
   function readImage(file) {
     return new Promise(function (resolve, reject) {
       var fr = new FileReader();
@@ -288,24 +292,20 @@
   }
 
   /* ======================================================== Leaflet + geo */
-  /* Swap-in note: to use the Google Maps JavaScript API instead, replace
-     makeMap() with new google.maps.Map(el, {...}) plus a google.maps.Marker,
-     and swap geocode()/reverseGeocode() for the Geocoding API. A Google map
-     rendered without a billed API key shows a "for development purposes only"
-     watermark, which is why this prototype ships with Leaflet + OSM. */
-  var OSM_TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  var OSM_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  var GMAPS_TILES = "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+  var GMAPS_ATTR  = '&copy; Google Maps';
 
   function makeMap(el, center, zoom, opts) {
     opts = opts || {};
     var map = global.L.map(el, { scrollWheelZoom: !!opts.scrollWheelZoom }).setView(
       [center.lat, center.lng], zoom || 14
     );
-    var tiles = global.L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_ATTR });
+    var tiles = global.L.tileLayer(GMAPS_TILES, { 
+      maxZoom: 20, 
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], 
+      attribution: GMAPS_ATTR 
+    });
 
-    /* If the tile server is unreachable (offline demo, blocked network, or a
-       strict referrer policy) the grid would render as empty grey squares.
-       Drop a friendly overlay on top so the map never looks broken. */
     var broken = 0, warned = false;
     tiles.on("tileerror", function () {
       broken++;

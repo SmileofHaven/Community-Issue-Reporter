@@ -240,7 +240,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" data-close type="button">Close</button>
-      <a class="btn btn-primary" id="amOpen" href="#" target="_blank" rel="noopener">Open in OpenStreetMap</a>
+      <a class="btn btn-primary" id="amOpen" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
     </div>
   </div>
 </div>
@@ -520,7 +520,7 @@
     activeId = id;
     CF.$("#amTitle").textContent = i.title;
     CF.$("#amSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.address);
-    CF.$("#amOpen").href = "https://www.openstreetmap.org/?mlat=" + i.lat + "&mlon=" + i.lng + "#map=17/" + i.lat + "/" + i.lng;
+    CF.$("#amOpen").href = "https://www.google.com/maps/search/?api=1&query=" + i.lat + "," + i.lng;
     CF.$("#amMeta").innerHTML =
       "<div><dt>Status</dt><dd>" + i.status + "</dd></div>" +
       "<div><dt>Priority</dt><dd>" + CF.escapeHtml(i.priority) + "</dd></div>" +
