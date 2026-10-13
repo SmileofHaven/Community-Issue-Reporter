@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CivicFix — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="auth">
+
+  <!-- ================= BRAND / MARKETING PANEL ================= -->
+  <section class="auth-brand">
+    <div>
+      <div class="brand-logo">
+        <span class="brand-mark">&#127959;&#65039;</span>
+        <span>CivicFix<span style="opacity:.65;font-weight:600"> SaaS</span></span>
+      </div>
+    </div>
+
+    <div>
+      <h1 class="auth-headline">Report potholes, drainage issues and urban problems instantly.</h1>
+      <p class="auth-sub">
+        One shared workspace where citizens raise a ticket and the municipality closes it —
+        with photos, an exact map pin and a status trail both sides can trust.
+      </p>
+      <ul class="auth-points">
+        <li><span>&#10003;</span> Pin the exact spot on the map in seconds</li>
+        <li><span>&#10003;</span> Attach photos straight from your phone camera</li>
+        <li><span>&#10003;</span> Track every ticket from New to Closed</li>
+        <li><span>&#10003;</span> Municipal crews get a live dispatch board</li>
+      </ul>
+    </div>
+
+    <p class="auth-foot">Trusted by municipal ward offices &amp; citizen groups &middot; Prototype build</p>
+  </section>
+
+  <!-- ================= SIGN-IN PANEL ================= -->
+  <section class="auth-panel">
+    <div class="auth-card">
+      <h1>Welcome back</h1>
+      <p class="muted small" style="margin-bottom:1.2rem">Sign in to report an issue or manage your ward.</p>
+
+      <div class="alert" id="loginAlert"></div>
+
+      <!-- Demo role picker: stands in for real account routing -->
+      <div class="demo-role">
+        <label>Demo role</label>
+        <div class="seg" id="roleSeg">
+          <button type="button" class="active" data-role="citizen">&#128100; Citizen</button>
+          <button type="button" data-role="staff">&#127963;&#65039; Municipal staff</button>
+        </div>
+      </div>
+
+      <!-- Primary: Google OAuth (mocked) -->
+      <button class="auth-google" id="googleBtn" type="button">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.77 24c0-1.6.27-3.14.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider">OR</div>
+
+      <!-- Alternative: email + password -->
+      <form id="emailForm" novalidate>
+        <div class="field" id="fEmail">
+          <label for="email">Email address</label>
+          <input class="input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
+          <div class="error-text">Enter a valid email address.</div>
+        </div>
+        <div class="field" id="fPass">
+          <label for="password">Password</label>
+          <input class="input" type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+          <div class="error-text">Password must be at least 6 characters.</div>
+        </div>
+        <div class="link-row"><a href="#" id="forgotLink" class="small">Forgot password?</a></div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" id="signInBtn">Sign in</button>
+      </form>
+
+      <p class="center small muted" style="margin-top:1.1rem">
+        New to CivicFix? <a href="#" id="createLink">Create an account</a>
+      </p>
+
+      <div class="auth-legal">
+        <a href="#" class="legal">Terms of Service</a>
+        <a href="#" class="legal">Privacy Policy</a>
+        <a href="#" class="legal">Support</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast-wrap"></div>
+
+<script src="mockData.js"></script>
+<script src="app.js"></script>
+<script>
+(function () {
+  CF.seed();                       // make sure demo issues exist
+  var role = "citizen";
+
+  /* -------- demo role switch -------- */
+  CF.$$("#roleSeg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      CF.$$("#roleSeg button").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      role = b.getAttribute("data-role");
+    });
+  });
+
+  function go(session) {
+    CF.toast("ok", "Signed in", session.role === "staff" ? "Opening the municipal console…" : "Opening your dashboard…");
+    setTimeout(function () {
+      location.href = session.role === "staff" ? "admin.html" : "dashboard.html";
+    }, 550);
+  }
+
+  /* -------- mocked Google OAuth: pretend the popup succeeded -------- */
+  CF.$("#googleBtn").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner dark"></span> Connecting to Google…';
+    setTimeout(function () {
+      var s = role === "staff"
+        ? CF.login("staff", "ops@city.gov", "Ops Controller")
+        : CF.login("citizen", "aarav.menon@gmail.com", "Aarav Menon");
+      go(s);
+    }, 900);
+  });
+
+  /* -------- email + password (mock) -------- */
+  CF.$("#emailForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = CF.$("#email").value.trim();
+    var pass  = CF.$("#password").value;
+    var okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    var okPass  = pass.length >= 6;
+
+    CF.$("#fEmail").classList.toggle("invalid", !okEmail);
+    CF.$("#fPass").classList.toggle("invalid", !okPass);
+    if (!okEmail || !okPass) {
+      var a = CF.$("#loginAlert");
+      a.textContent = "Please fix the highlighted fields and try again.";
+      a.classList.add("show");
+      return;
+    }
+    CF.$("#loginAlert").classList.remove("show");
+
+    var btn = CF.$("#signInBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in…';
+    setTimeout(function () {
+      var name = email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+      go(CF.login(role, email, name));
+    }, 800);
+  });
+
+  /* -------- placeholder links -------- */
+  [["#forgotLink", "Password reset", "A reset link would be emailed to you."],
+   ["#createLink", "Create account", "Self-signup flow is out of scope for this prototype."],
+   [".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
+  .forEach(function (pair) {
+    CF.$$(pair[0]).forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.preventDefault();
+        CF.toast("", pair[1], pair[2]);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

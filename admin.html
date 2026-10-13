@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CivicFix — Municipal console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="admin-shell">
+
+  <!-- ============================== SIDEBAR ============================== -->
+  <aside class="sidebar">
+    <div class="brand-logo">
+      <span class="brand-mark">&#127959;&#65039;</span><span>CivicFix Ops</span>
+    </div>
+
+    <div class="side-label">Workspace</div>
+    <a class="side-link active" data-nav="overview"><span class="ic">&#128202;</span> Overview / Analytics</a>
+    <a class="side-link" data-nav="issues"><span class="ic">&#128203;</span> All Issues</a>
+    <a class="side-link" data-nav="map"><span class="ic">&#128506;&#65039;</span> Map View (All Reports)</a>
+    <a class="side-link" data-nav="teams"><span class="ic">&#128101;</span> Assigned Teams</a>
+
+    <div class="side-label">Account</div>
+    <a class="side-link" data-nav="settings"><span class="ic">&#9881;&#65039;</span> Settings</a>
+    <a class="side-link" href="dashboard.html"><span class="ic">&#128100;</span> Citizen view</a>
+
+    <div class="side-foot">
+      Ward 42 &middot; Central District<br>
+      <span data-user-name>Ops Controller</span>
+    </div>
+  </aside>
+
+  <!-- ============================== MAIN ============================== -->
+  <div class="admin-main">
+
+    <div class="admin-bar">
+      <strong id="viewTitle" style="font-size:1.05rem;color:var(--ink)">Overview &amp; Analytics</strong>
+      <div class="topbar-search" style="margin-left:auto;max-width:340px">
+        <span class="ico">&#128269;</span>
+        <input class="input" id="adminSearch" type="search" placeholder="Search tickets, addresses, teams…">
+      </div>
+      <div class="dropdown">
+        <button class="avatar" data-toggle="dropdown" type="button" data-user-initials>OC</button>
+        <div class="dropdown-menu">
+          <div class="dropdown-head">
+            <strong data-user-name>Ops Controller</strong><span data-user-email>ops@city.gov</span>
+          </div>
+          <a class="dropdown-item" href="#" data-nav-link="settings">&#9881;&#65039; Console settings</a>
+          <a class="dropdown-item danger" href="#" data-logout>&#10162; Log Out</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-body">
+
+      <!-- ---------------- OVERVIEW ---------------- -->
+      <section class="view" id="view-overview">
+        <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat"><div class="k">Open tickets</div><div class="v" id="oOpen">0</div><div class="d">New + Assigned + In Progress</div></div>
+          <div class="stat warn"><div class="k">Awaiting triage</div><div class="v" id="oNew">0</div><div class="d">Unassigned</div></div>
+          <div class="stat violet"><div class="k">Crews engaged</div><div class="v" id="oCrew">0</div><div class="d">Active teams</div></div>
+          <div class="stat ok"><div class="k">Closed this cycle</div><div class="v" id="oClosed">0</div><div class="d">Resolved tickets</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="ov-grid">
+          <div class="card">
+            <div class="card-head"><h2>Reports by category</h2><span class="pill" id="ovTotal">0 total</span></div>
+            <div class="card-pad"><div class="bars" id="barsCat"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Status breakdown</h2><span class="pill">live</span></div>
+            <div class="card-pad"><div class="bars" id="barsStatus"></div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div class="card-head"><h2>Needs attention</h2><span class="small muted">High priority, still open</span></div>
+          <div class="card-pad" id="urgentList"></div>
+        </div>
+      </section>
+
+      <!-- ---------------- ALL ISSUES ---------------- -->
+      <section class="view hidden" id="view-issues">
+        <div class="filter-bar">
+          <div class="view-tabs" id="viewTabs">
+            <button class="active" data-view="kanban">Kanban board</button>
+            <button data-view="table">Data table</button>
+          </div>
+          <div style="flex:1"></div>
+          <select class="select" id="adminTeamFilter" aria-label="Filter by team">
+            <option value="">All teams</option>
+          </select>
+        </div>
+
+        <!-- Kanban -->
+        <div class="kanban" id="kanban"></div>
+
+        <!-- Table -->
+        <div class="table-wrap hidden" id="tableWrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>ID</th><th>Issue</th><th>Category</th><th>Priority</th>
+                <th>Status</th><th>Team</th><th>Filed</th><th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------------- MAP VIEW ---------------- -->
+      <section class="view hidden" id="view-map">
+        <div class="card">
+          <div class="card-head">
+            <h2>All reports on the map</h2>
+            <span class="small muted" id="mapCount">0 pins</span>
+          </div>
+          <div class="card-pad">
+            <div class="map-box tall" id="adminMap"></div>
+            <div class="legend">
+              <span><i style="background:#b45309"></i>New</span>
+              <span><i style="background:#6d28d9"></i>Assigned</span>
+              <span><i style="background:#1d4ed8"></i>In Progress</span>
+              <span><i style="background:#0f9d58"></i>Closed</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------------- TEAMS ---------------- -->
+      <section class="view hidden" id="view-teams">
+        <div class="team-grid" id="teamGrid"></div>
+      </section>
+
+      <!-- ---------------- SETTINGS ---------------- -->
+      <section class="view hidden" id="view-settings">
+        <div class="card" style="max-width:640px">
+          <div class="card-head"><h2>Console settings</h2></div>
+          <div class="card-pad">
+            <div class="field">
+              <label for="setCity">Municipality name</label>
+              <input class="input" id="setCity" type="text" value="Central City Municipal Corporation">
+            </div>
+            <div class="field">
+              <label for="setWard">Default ward</label>
+              <input class="input" id="setWard" type="text" value="Ward 42 — Central District">
+            </div>
+            <div class="field">
+              <label for="setSla">SLA for high-priority tickets <span class="hint">hours</span></label>
+              <input class="input" id="setSla" type="number" value="24" min="1">
+            </div>
+            <div class="field">
+              <label for="setRadius">Duplicate detection radius <span class="hint">metres</span></label>
+              <input class="input" id="setRadius" type="number" value="80" min="10">
+            </div>
+            <label class="switch" style="margin-bottom:.7rem"><input type="checkbox" checked> Auto-assign by category</label>
+            <label class="switch" style="margin-bottom:.7rem"><input type="checkbox" checked> Notify reporters on status change</label>
+            <label class="switch" style="margin-bottom:1.1rem"><input type="checkbox"> Escalate overdue tickets to the ward officer</label>
+            <button class="btn btn-primary" id="setSave" type="button">Save settings</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ASSIGN TEAM ============================== -->
+<div class="modal" id="assignModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div><h2>Assign team</h2><p class="small muted" style="margin:0" id="aSub">—</p></div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="aTeam">Crew / department</label>
+        <select class="select" id="aTeam"></select>
+      </div>
+      <div class="field">
+        <label for="aPriority">Priority</label>
+        <select class="select" id="aPriority">
+          <option>Low</option><option selected>Medium</option><option>High</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="aNote">Dispatch note <span class="hint">optional</span></label>
+        <textarea class="textarea" id="aNote" style="min-height:80px"
+                  placeholder="Access instructions, equipment needed…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="aSave" type="button">Assign team</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== CHANGE STATUS ============================== -->
+<div class="modal" id="statusModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div><h2>Change status</h2><p class="small muted" style="margin:0" id="sSub">—</p></div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="sStatus">New status</label>
+        <select class="select" id="sStatus"></select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="sNote">Update note <span class="hint">visible to the reporter</span></label>
+        <textarea class="textarea" id="sNote" style="min-height:80px"
+                  placeholder="e.g. Crew on site, repair scheduled for tomorrow morning."></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="sSave" type="button">Update status</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== VIEW ON MAP ============================== -->
+<div class="modal" id="adminMapModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div><h2 id="amTitle">Issue location</h2><p class="small muted" style="margin:0" id="amSub">—</p></div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="map-box" id="singleMap"></div>
+      <dl class="detail-grid" style="margin-top:1rem" id="amMeta"></dl>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+      <a class="btn btn-primary" id="amOpen" href="#" target="_blank" rel="noopener">Open in OpenStreetMap</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== INTERNAL NOTE ============================== -->
+<div class="modal" id="noteModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div><h2>Add internal note</h2><p class="small muted" style="margin:0" id="nSub">—</p></div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="nText">Note <span class="hint">staff-only unless posted with a status change</span></label>
+        <textarea class="textarea" id="nText" placeholder="Material shortage, site access blocked, needs inspection…"></textarea>
+      </div>
+      <h3 style="margin:.4rem 0 .3rem">Existing notes</h3>
+      <div id="nExisting"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="nSave" type="button">Save note</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="mockData.js"></script>
+<script src="app.js"></script>
+<script>
+(function () {
+  var session = CF.requireAuth("staff");
+  if (!session) { return; }
+  CF.seed();
+  CF.paintShell();
+  CF.wireDropdowns();
+  CF.wireModals();
+
+  var activeId = null;
+  var q = "", teamFilter = "", listView = "kanban";
+  var adminMap = null, adminLayer = null, singleMap = null, singleMarker = null;
+
+  /* ---------------- filters / selects ---------------- */
+  var teamSel = CF.$("#adminTeamFilter");
+  var aTeam = CF.$("#aTeam");
+  var sStatus = CF.$("#sStatus");
+  window.MOCK.teams.forEach(function (t) {
+    teamSel.insertAdjacentHTML("beforeend", '<option value="' + t + '">' + t + "</option>");
+    aTeam.insertAdjacentHTML("beforeend", '<option value="' + t + '">' + t + "</option>");
+  });
+  CF.STATUSES.forEach(function (s) {
+    sStatus.insertAdjacentHTML("beforeend", '<option value="' + s + '">' + s + "</option>");
+  });
+
+  /* ---------------- helpers ---------------- */
+  function filtered() {
+    var s = q.toLowerCase();
+    return CF.getIssues().filter(function (i) {
+      if (teamFilter && i.team !== teamFilter) { return false; }
+      if (!s) { return true; }
+      return (i.id + " " + i.title + " " + i.address + " " + i.team + " " + i.status + " " +
+              CF.catMeta(i.category).label).toLowerCase().indexOf(s) > -1;
+    });
+  }
+  function cardHtml(i) {
+    var c = CF.catMeta(i.category);
+    return '<article class="kcard" draggable="true" data-id="' + i.id + '">' +
+      "<h4>" + CF.escapeHtml(i.title) + "</h4>" +
+      '<div class="km"><span class="mono">' + i.id + "</span><span>" + c.icon + " " +
+        CF.escapeHtml(c.label) + "</span><span>" + CF.escapeHtml(i.priority) + "</span></div>" +
+      '<div class="ka">' +
+        '<button class="btn btn-outline btn-sm" data-act="assign">Assign Team</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="status">Change Status</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="map">View on Map</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="note">Add Internal Note</button>' +
+      "</div></article>";
+  }
+
+  /* ---------------- kanban ---------------- */
+  function renderKanban() {
+    var list = filtered();
+    var host = CF.$("#kanban");
+    host.innerHTML = CF.STATUSES.map(function (st) {
+      var cards = list.filter(function (i) { return i.status === st; });
+      return '<div class="kcol" data-status="' + st + '">' +
+        '<div class="kcol-head"><h3><span class="dot"></span>' + st + "</h3>" +
+        '<span class="kcount">' + cards.length + "</span></div>" +
+        '<div class="kcards">' + cards.map(cardHtml).join("") + "</div></div>";
+    }).join("");
+  }
+
+  /* drag & drop */
+  CF.$("#kanban").addEventListener("dragstart", function (e) {
+    var card = e.target.closest(".kcard");
+    if (!card) { return; }
+    card.classList.add("dragging");
+    e.dataTransfer.setData("text/plain", card.getAttribute("data-id"));
+    e.dataTransfer.effectAllowed = "move";
+  });
+  CF.$("#kanban").addEventListener("dragend", function (e) {
+    var card = e.target.closest(".kcard");
+    if (card) { card.classList.remove("dragging"); }
+    CF.$$(".kcol").forEach(function (c) { c.classList.remove("drag-over"); });
+  });
+  CF.$("#kanban").addEventListener("dragover", function (e) {
+    var col = e.target.closest(".kcol");
+    if (!col) { return; }
+    e.preventDefault();
+    CF.$$(".kcol").forEach(function (c) { c.classList.remove("drag-over"); });
+    col.classList.add("drag-over");
+  });
+  CF.$("#kanban").addEventListener("drop", function (e) {
+    var col = e.target.closest(".kcol");
+    if (!col) { return; }
+    e.preventDefault();
+    var id = e.dataTransfer.getData("text/plain");
+    var status = col.getAttribute("data-status");
+    var issue = CF.getIssue(id);
+    if (!issue || issue.status === status) { renderAll(); return; }
+    if (status !== "New" && !issue.team) {
+      var guess = window.MOCK.teams[0];
+      CF.assignTeam(id, guess, issue.priority);
+      CF.toast("", "Auto-assigned", "No team was set, so " + guess + " was attached.");
+    }
+    CF.setStatus(id, status);
+    renderAll();
+    CF.toast("ok", "Status updated", id + " moved to " + status + ".");
+  });
+
+  /* ---------------- table ---------------- */
+  function renderTable() {
+    var list = filtered();
+    CF.$("#tableBody").innerHTML = list.map(function (i) {
+      var c = CF.catMeta(i.category);
+      return "<tr>" +
+        '<td class="mono">' + i.id + "</td>" +
+        "<td><strong>" + CF.escapeHtml(i.title) + "</strong>" +
+          '<div class="small muted">' + CF.escapeHtml(i.address || "") + "</div></td>" +
+        "<td>" + c.icon + " " + CF.escapeHtml(c.label) + "</td>" +
+        "<td>" + CF.escapeHtml(i.priority) + "</td>" +
+        "<td>" + CF.badge(i.status) + "</td>" +
+        "<td>" + CF.escapeHtml(i.team || "—") + "</td>" +
+        "<td>" + CF.fmtDate(i.createdAt) + "</td>" +
+        '<td><div class="td-actions">' +
+          '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + i.id + '">Assign</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="status" data-id="' + i.id + '">Status</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="map" data-id="' + i.id + '">Map</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="note" data-id="' + i.id + '">Note</button>' +
+        "</div></td></tr>";
+    }).join("") || '<tr><td colspan="8" class="center muted" style="padding:2rem">No tickets match the current filters.</td></tr>';
+  }
+
+  /* ---------------- overview ---------------- */
+  function renderOverview() {
+    var all = CF.getIssues();
+    var open = all.filter(function (i) { return i.status !== "Closed"; });
+    CF.$("#oOpen").textContent = open.length;
+    CF.$("#oNew").textContent = all.filter(function (i) { return i.status === "New"; }).length;
+    CF.$("#oCrew").textContent = window.MOCK.teams.filter(function (t) {
+      return all.some(function (i) { return i.team === t && i.status !== "Closed"; });
+    }).length;
+    CF.$("#oClosed").textContent = all.filter(function (i) { return i.status === "Closed"; }).length;
+    CF.$("#ovTotal").textContent = all.length + " total";
+
+    var maxCat = 1;
+    var catRows = window.MOCK.categories.map(function (c) {
+      var n = all.filter(function (i) { return i.category === c.id; }).length;
+      if (n > maxCat) { maxCat = n; }
+      return { label: c.icon + " " + c.label, n: n };
+    });
+    CF.$("#barsCat").innerHTML = catRows.map(function (r) {
+      return '<div class="bar-row"><span>' + r.label + "</span>" +
+        '<span class="bar-track"><span class="bar-fill" style="width:' +
+        Math.round((r.n / maxCat) * 100) + '%"></span></span>' +
+        "<span><b>" + r.n + "</b></span></div>";
+    }).join("");
+
+    var colors = { "New": "#b45309", "Assigned": "#6d28d9", "In Progress": "#1d4ed8", "Closed": "#0f9d58" };
+    var maxSt = 1;
+    var stRows = CF.STATUSES.map(function (s) {
+      var n = all.filter(function (i) { return i.status === s; }).length;
+      if (n > maxSt) { maxSt = n; }
+      return { label: s, n: n, color: colors[s] };
+    });
+    CF.$("#barsStatus").innerHTML = stRows.map(function (r) {
+      return '<div class="bar-row"><span>' + r.label + "</span>" +
+        '<span class="bar-track"><span class="bar-fill" style="width:' +
+        Math.round((r.n / maxSt) * 100) + "%;background:" + r.color + '"></span></span>' +
+        "<span><b>" + r.n + "</b></span></div>";
+    }).join("");
+
+    var urgent = all.filter(function (i) { return i.priority === "High" && i.status !== "Closed"; });
+    CF.$("#urgentList").innerHTML = urgent.length
+      ? '<div class="feed">' + urgent.map(function (i) {
+          var c = CF.catMeta(i.category);
+          return '<div class="issue" style="padding:.8rem 1rem">' +
+            '<div class="issue-thumb" style="width:46px;height:46px;font-size:1.2rem">' + c.icon + "</div>" +
+            '<div class="issue-main"><h3 style="font-size:.95rem">' + CF.escapeHtml(i.title) + "</h3>" +
+            '<div class="issue-meta"><span class="mono">' + i.id + "</span><span>&#128205; " +
+            CF.escapeHtml(i.address) + "</span><span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
+            "<span>" + CF.escapeHtml(i.team || "Unassigned") + "</span></div></div>" +
+            '<div class="issue-actions">' + CF.badge(i.status) +
+            '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + i.id + '">Assign</button>' +
+            "</div></div>";
+        }).join("") + "</div>"
+      : '<p class="small muted" style="margin:0">Nothing urgent right now — every high-priority ticket is closed.</p>';
+  }
+
+  /* ---------------- map ---------------- */
+  function renderMap() {
+    var list = filtered();
+    CF.$("#mapCount").textContent = list.length + " pins";
+    if (!adminMap) {
+      adminMap = CF.makeMap(CF.$("#adminMap"), window.MOCK.defaultCenter, 12, { scrollWheelZoom: true });
+      adminLayer = window.L.layerGroup().addTo(adminMap);
+    }
+    adminLayer.clearLayers();
+    var bounds = [];
+    list.forEach(function (i) {
+      bounds.push([i.lat, i.lng]);
+      window.L.marker([i.lat, i.lng], { icon: CF.pinIcon(CF.STATUS_COLORS[i.status]) })
+        .bindPopup("<b>" + CF.escapeHtml(i.title) + "</b><br>" + CF.escapeHtml(i.address) +
+                   "<br>" + CF.badge(i.status) + " &middot; " + CF.escapeHtml(i.team || "Unassigned"))
+        .addTo(adminLayer);
+    });
+    if (bounds.length) { adminMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); }
+    setTimeout(function () { adminMap.invalidateSize(); }, 60);
+  }
+
+  /* ---------------- teams ---------------- */
+  function renderTeams() {
+    var all = CF.getIssues();
+    CF.$("#teamGrid").innerHTML = window.MOCK.teams.map(function (t) {
+      var mine = all.filter(function (i) { return i.team === t; });
+      var open = mine.filter(function (i) { return i.status !== "Closed"; });
+      return '<div class="team-card"><h3>' + CF.escapeHtml(t) + "</h3>" +
+        '<div class="n">' + open.length + '</div>' +
+        '<div class="small muted">open of ' + mine.length + " total tickets</div>" +
+        '<ul class="mini-list">' + (open.slice(0, 4).map(function (i) {
+          return "<li><span class=\"dot\"></span>" + CF.escapeHtml(i.title) + "</li>";
+        }).join("") || '<li class="muted">Queue is clear.</li>') + "</ul>" +
+        '<button class="btn btn-outline btn-sm" data-team="' + CF.escapeHtml(t) +
+        '" style="margin-top:.8rem">View team queue</button></div>';
+    }).join("");
+  }
+
+  function renderAll() {
+    renderOverview();
+    renderKanban();
+    renderTable();
+    renderTeams();
+    if (!CF.$("#view-map").classList.contains("hidden")) { renderMap(); }
+  }
+
+  /* ---------------- modal openers ---------------- */
+  function openAssign(id) {
+    var i = CF.getIssue(id); if (!i) { return; }
+    activeId = id;
+    CF.$("#aSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.title);
+    CF.$("#aTeam").value = i.team || window.MOCK.teams[0];
+    CF.$("#aPriority").value = i.priority;
+    CF.$("#aNote").value = "";
+    CF.openModal("assignModal");
+  }
+  function openStatus(id) {
+    var i = CF.getIssue(id); if (!i) { return; }
+    activeId = id;
+    CF.$("#sSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; currently " + i.status;
+    CF.$("#sStatus").value = i.status;
+    CF.$("#sNote").value = "";
+    CF.openModal("statusModal");
+  }
+  function openMapModal(id) {
+    var i = CF.getIssue(id); if (!i) { return; }
+    activeId = id;
+    CF.$("#amTitle").textContent = i.title;
+    CF.$("#amSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.address);
+    CF.$("#amOpen").href = "https://www.openstreetmap.org/?mlat=" + i.lat + "&mlon=" + i.lng + "#map=17/" + i.lat + "/" + i.lng;
+    CF.$("#amMeta").innerHTML =
+      "<div><dt>Status</dt><dd>" + i.status + "</dd></div>" +
+      "<div><dt>Priority</dt><dd>" + CF.escapeHtml(i.priority) + "</dd></div>" +
+      "<div><dt>Team</dt><dd>" + CF.escapeHtml(i.team || "Unassigned") + "</dd></div>" +
+      "<div><dt>Filed</dt><dd>" + CF.fmtDate(i.createdAt, true) + "</dd></div>" +
+      "<div><dt>Coordinates</dt><dd class=\"mono\">" + i.lat.toFixed(5) + ", " + i.lng.toFixed(5) + "</dd></div>" +
+      "<div><dt>Reporter</dt><dd>" + CF.escapeHtml(i.reporter || "citizen@demo.gov") + "</dd></div>";
+
+    var modal = CF.$("#adminMapModal");
+    modal.__onOpen = function () {
+      setTimeout(function () {
+        if (!singleMap) {
+          singleMap = CF.makeMap(CF.$("#singleMap"), { lat: i.lat, lng: i.lng }, 17, { scrollWheelZoom: true });
+          singleMarker = window.L.marker([i.lat, i.lng], { icon: CF.pinIcon(CF.STATUS_COLORS[i.status]) }).addTo(singleMap);
+        } else {
+          singleMap.setView([i.lat, i.lng], 17);
+          singleMarker.setLatLng([i.lat, i.lng]);
+          singleMarker.setIcon(CF.pinIcon(CF.STATUS_COLORS[i.status]));
+        }
+        singleMap.invalidateSize();
+      }, 60);
+    };
+    CF.openModal("adminMapModal");
+  }
+  function openNote(id) {
+    var i = CF.getIssue(id); if (!i) { return; }
+    activeId = id;
+    CF.$("#nSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.title);
+    CF.$("#nText").value = "";
+    CF.$("#nExisting").innerHTML = (i.notes || []).length
+      ? '<ul class="note-list">' + i.notes.map(function (n) {
+          return "<li><b>" + CF.escapeHtml(n.by) + " &middot; " + CF.fmtDate(n.at, true) + "</b>" + CF.escapeHtml(n.text) + "</li>";
+        }).join("") + "</ul>"
+      : '<p class="small muted" style="margin:0">No notes on this ticket yet.</p>';
+    CF.openModal("noteModal");
+  }
+
+  /* ---------------- delegated actions ---------------- */
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]");
+    if (b) {
+      var id = b.getAttribute("data-id") || (b.closest(".kcard") ? b.closest(".kcard").getAttribute("data-id") : null);
+      if (!id) { return; }
+      var act = b.getAttribute("data-act");
+      if (act === "assign") { openAssign(id); }
+      if (act === "status") { openStatus(id); }
+      if (act === "map") { openMapModal(id); }
+      if (act === "note") { openNote(id); }
+      return;
+    }
+    var t = e.target.closest("[data-team]");
+    if (t) {
+      teamFilter = t.getAttribute("data-team");
+      CF.$("#adminTeamFilter").value = teamFilter;
+      show("issues");
+      renderAll();
+      CF.toast("", "Team queue", "Filtered to " + teamFilter + ".");
+    }
+  });
+
+  /* ---------------- modal saves ---------------- */
+  CF.$("#aSave").addEventListener("click", function () {
+    var note = CF.$("#aNote").value.trim();
+    CF.assignTeam(activeId, CF.$("#aTeam").value, CF.$("#aPriority").value);
+    if (note) { CF.addNote(activeId, note); }
+    CF.closeModal("assignModal");
+    renderAll();
+    CF.toast("ok", "Team assigned", activeId + " dispatched to " + CF.$("#aTeam").value + ".");
+  });
+  CF.$("#sSave").addEventListener("click", function () {
+    var st = CF.$("#sStatus").value, note = CF.$("#sNote").value.trim();
+    CF.setStatus(activeId, st, note);
+    CF.closeModal("statusModal");
+    renderAll();
+    CF.toast("ok", "Status updated", activeId + " is now " + st + ".");
+  });
+  CF.$("#nSave").addEventListener("click", function () {
+    var txt = CF.$("#nText").value.trim();
+    if (!txt) { CF.toast("err", "Empty note", "Write something before saving."); return; }
+    CF.addNote(activeId, txt, session.name);
+    CF.closeModal("noteModal");
+    renderAll();
+    CF.toast("ok", "Note saved", "Internal note added to " + activeId + ".");
+  });
+
+  /* ---------------- navigation ---------------- */
+  var TITLES = {
+    overview: "Overview & Analytics",
+    issues: "All Issues",
+    map: "Map View — All Reports",
+    teams: "Assigned Teams",
+    settings: "Settings"
+  };
+  function show(key) {
+    CF.$$(".view").forEach(function (v) { v.classList.toggle("hidden", v.id !== "view-" + key); });
+    CF.$$(".side-link[data-nav]").forEach(function (l) {
+      l.classList.toggle("active", l.getAttribute("data-nav") === key);
+    });
+    CF.$("#viewTitle").textContent = TITLES[key] || "Console";
+    if (key === "map") { setTimeout(renderMap, 60); }
+    if (key === "issues") { setTimeout(renderAll, 0); }
+  }
+  CF.$$(".side-link[data-nav]").forEach(function (l) {
+    l.addEventListener("click", function (e) { e.preventDefault(); show(l.getAttribute("data-nav")); });
+  });
+  CF.$$("[data-nav-link]").forEach(function (l) {
+    l.addEventListener("click", function (e) { e.preventDefault(); show(l.getAttribute("data-nav-link")); });
+  });
+
+  CF.$("#viewTabs").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) { return; }
+    CF.$$("#viewTabs button").forEach(function (x) { x.classList.remove("active"); });
+    b.classList.add("active");
+    listView = b.getAttribute("data-view");
+    CF.$("#kanban").classList.toggle("hidden", listView !== "kanban");
+    CF.$("#tableWrap").classList.toggle("hidden", listView !== "table");
+    renderAll();
+  });
+
+  CF.$("#adminSearch").addEventListener("input", function () { q = this.value; renderAll(); });
+  CF.$("#adminTeamFilter").addEventListener("change", function () { teamFilter = this.value; renderAll(); });
+  CF.$("#setSave").addEventListener("click", function () {
+    CF.toast("ok", "Settings saved", "Ward configuration updated locally.");
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

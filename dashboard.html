@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CivicFix — My dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============================== TOP NAVIGATION ============================== -->
+<header class="topbar">
+  <a class="brand-logo" href="dashboard.html" style="text-decoration:none">
+    <span class="brand-mark">&#127959;&#65039;</span>
+    <span>CivicFix</span>
+  </a>
+
+  <div class="topbar-search">
+    <span class="ico">&#128269;</span>
+    <input class="input" id="search" type="search" placeholder="Search by ID, keyword or status…" aria-label="Search reports">
+  </div>
+
+  <nav class="topbar-links">
+    <a class="navlink active" href="dashboard.html">Dashboard</a>
+    <a class="navlink" href="report.html">Report Issue</a>
+    <a class="navlink" data-role-only="staff" href="admin.html">Admin Console</a>
+
+    <div class="dropdown" style="margin-left:.4rem">
+      <button class="avatar" data-toggle="dropdown" type="button" title="Account menu"
+              data-user-initials>AM</button>
+      <div class="dropdown-menu">
+        <div class="dropdown-head">
+          <strong data-user-name>Aarav Menon</strong>
+          <span data-user-email>citizen@demo.gov</span>
+        </div>
+        <a class="dropdown-item" href="#" id="menuProfile">&#9881;&#65039; Profile Settings</a>
+        <a class="dropdown-item" href="#" id="menuReports">&#128203; My Reports</a>
+        <a class="dropdown-item danger" href="#" data-logout>&#10162; Log Out</a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main class="page">
+
+  <!-- ============================== HERO + CTA ============================== -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>Good to see you, <span data-user-name>Aarav</span> &#128075;</h1>
+        <p>Spotted something broken in your neighbourhood? Drop a pin, add a photo, and the right crew gets it.</p>
+      </div>
+      <a class="btn btn-primary btn-lg" href="report.html">&#43; Report New Issue</a>
+    </div>
+  </section>
+
+  <!-- ============================== STAT CARDS ============================== -->
+  <section class="stats" id="stats">
+    <div class="stat"><div class="k">Total Reported</div><div class="v" id="sTotal">0</div><div class="d">All tickets you filed</div></div>
+    <div class="stat warn"><div class="k">Pending</div><div class="v" id="sPending">0</div><div class="d">Awaiting triage</div></div>
+    <div class="stat violet"><div class="k">In Progress</div><div class="v" id="sProgress">0</div><div class="d">Crews on the ground</div></div>
+    <div class="stat ok"><div class="k">Resolved</div><div class="v" id="sClosed">0</div><div class="d">Closed tickets</div></div>
+  </section>
+
+  <!-- ============================== FILTER BAR ============================== -->
+  <div class="filter-bar">
+    <div class="chips" id="statusChips">
+      <button class="chip active" data-status="All">All</button>
+      <button class="chip" data-status="New">New</button>
+      <button class="chip" data-status="Assigned">Assigned</button>
+      <button class="chip" data-status="In Progress">In Progress</button>
+      <button class="chip" data-status="Closed">Closed</button>
+    </div>
+    <div style="flex:1"></div>
+    <select class="select" id="catFilter" aria-label="Filter by category">
+      <option value="">All categories</option>
+    </select>
+    <select class="select" id="sortBy" aria-label="Sort reports">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="priority">Priority</option>
+    </select>
+  </div>
+
+  <!-- ============================== ISSUE FEED ============================== -->
+  <section class="feed" id="feed"></section>
+
+</main>
+
+<!-- Mobile sticky CTA -->
+<a class="fab" href="report.html">&#43; Report New Issue</a>
+
+<!-- ============================== DETAIL MODAL ============================== -->
+<div class="modal" id="detailModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div>
+        <h2 id="dTitle">Issue</h2>
+        <p class="small muted" style="margin:0" id="dSub">—</p>
+      </div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body" id="dBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+      <button class="btn btn-primary" id="dTrack" type="button">&#128506;&#65039; Track on Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MAP MODAL ============================== -->
+<div class="modal" id="mapModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div>
+        <h2>Track on Map</h2>
+        <p class="small muted" style="margin:0" id="mSub">—</p>
+      </div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="map-box" id="trackMap"></div>
+      <p class="small muted" style="margin:.7rem 0 0">
+        Base map &copy; OpenStreetMap contributors. Swap in the Google Maps JavaScript API by
+        replacing <span class="mono">CF.makeMap()</span> — see the note in <span class="mono">app.js</span>.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+      <a class="btn btn-primary" id="mDirections" href="#" target="_blank" rel="noopener">Open directions</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== PROFILE MODAL ============================== -->
+<div class="modal" id="profileModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Profile Settings</h2>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="pName">Display name</label>
+        <input class="input" id="pName" type="text">
+      </div>
+      <div class="field">
+        <label for="pEmail">Email address</label>
+        <input class="input" id="pEmail" type="email" readonly>
+      </div>
+      <div class="field">
+        <label for="pPhone">Phone <span class="hint">for crew call-backs</span></label>
+        <input class="input" id="pPhone" type="tel" placeholder="+1 555 0100">
+      </div>
+      <label class="switch"><input type="checkbox" id="pNotify" checked> Email me on every status change</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="pSave" type="button">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="mockData.js"></script>
+<script src="app.js"></script>
+<script>
+(function () {
+  var session = CF.requireAuth("citizen");
+  if (!session) { return; }
+  CF.seed();
+  CF.paintShell();
+  CF.wireDropdowns();
+  CF.wireModals();
+
+  var state = { q: "", status: "All", cat: "", sort: "new" };
+  var activeId = null;
+  var trackMap = null, trackMarker = null;
+
+  /* ---------- category filter options ---------- */
+  var catSel = CF.$("#catFilter");
+  window.MOCK.categories.forEach(function (c) {
+    var o = document.createElement("option");
+    o.value = c.id; o.textContent = c.icon + " " + c.label;
+    catSel.appendChild(o);
+  });
+
+  /* ---------- render ---------- */
+  function visible() {
+    var q = state.q.toLowerCase();
+    var list = CF.getIssues().filter(function (i) {
+      if (state.status !== "All" && i.status !== state.status) { return false; }
+      if (state.cat && i.category !== state.cat) { return false; }
+      if (!q) { return true; }
+      return (i.id + " " + i.title + " " + i.address + " " + i.status + " " +
+              CF.catMeta(i.category).label).toLowerCase().indexOf(q) > -1;
+    });
+    var pr = { High: 0, Medium: 1, Low: 2 };
+    list.sort(function (a, b) {
+      if (state.sort === "old") { return new Date(a.createdAt) - new Date(b.createdAt); }
+      if (state.sort === "priority") { return (pr[a.priority] || 9) - (pr[b.priority] || 9); }
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    return list;
+  }
+
+  function renderStats() {
+    var all = CF.getIssues();
+    CF.$("#sTotal").textContent = all.length;
+    CF.$("#sPending").textContent = all.filter(function (i) { return i.status === "New"; }).length;
+    CF.$("#sProgress").textContent = all.filter(function (i) { return i.status === "In Progress"; }).length;
+    CF.$("#sClosed").textContent = all.filter(function (i) { return i.status === "Closed"; }).length;
+  }
+
+  function renderFeed() {
+    var list = visible();
+    var feed = CF.$("#feed");
+    if (!list.length) {
+      feed.innerHTML = '<div class="card empty"><span class="em">&#128269;</span>' +
+        "<strong>No reports match your filters.</strong>" +
+        '<p class="small" style="margin:.4rem 0 0">Try clearing the search box or picking another status.</p></div>';
+      return;
+    }
+    feed.innerHTML = list.map(function (i) {
+      var c = CF.catMeta(i.category);
+      var thumb = i.photos && i.photos.length
+        ? '<img src="' + i.photos[0].data + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'
+        : c.icon;
+      return '<article class="issue">' +
+        '<div class="issue-thumb">' + thumb + "</div>" +
+        '<div class="issue-main">' +
+          "<h3>" + CF.escapeHtml(i.title) + "</h3>" +
+          '<div class="issue-meta">' +
+            '<span class="mono">' + i.id + "</span>" +
+            "<span>" + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
+            "<span>&#128205; " + CF.escapeHtml(i.address || "No address") + "</span>" +
+            "<span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
+            (i.team ? "<span>&#128101; " + CF.escapeHtml(i.team) + "</span>" : "") +
+          "</div>" +
+        "</div>" +
+        '<div class="issue-actions">' + CF.badge(i.status) +
+          '<button class="btn btn-outline btn-sm" data-view="' + i.id + '">View Details</button>' +
+          '<button class="btn btn-outline btn-sm" data-map="' + i.id + '">&#128506;&#65039; Track on Map</button>' +
+        "</div></article>";
+    }).join("");
+  }
+
+  function render() { renderStats(); renderFeed(); }
+
+  /* ---------- detail modal ---------- */
+  function openDetail(id) {
+    var i = CF.getIssue(id);
+    if (!i) { return; }
+    activeId = id;
+    var c = CF.catMeta(i.category);
+    CF.$("#dTitle").textContent = i.title;
+    CF.$("#dSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " +
+      c.icon + " " + CF.escapeHtml(c.label) + " &middot; filed " + CF.fmtDate(i.createdAt, true);
+
+    var photos = (i.photos || []).length
+      ? '<div class="thumbs">' + i.photos.map(function (p) {
+          return '<div class="thumb"><img src="' + p.data + '" alt="report photo"></div>';
+        }).join("") + "</div>"
+      : '<p class="small muted">No photos attached.</p>';
+
+    var timeline = (i.history || []).map(function (h) {
+      return "<li><strong>" + CF.escapeHtml(h.status) + "</strong><span>" + CF.fmtDate(h.at, true) + "</span></li>";
+    }).join("");
+
+    var notes = (i.notes || []).length
+      ? '<ul class="note-list">' + i.notes.map(function (n) {
+          return "<li><b>" + CF.escapeHtml(n.by) + " &middot; " + CF.fmtDate(n.at, true) + "</b>" +
+                 CF.escapeHtml(n.text) + "</li>";
+        }).join("") + "</ul>"
+      : '<p class="small muted">No updates posted yet.</p>';
+
+    CF.$("#dBody").innerHTML =
+      '<div class="row between wrap" style="margin-bottom:1rem">' +
+        CF.badge(i.status) +
+        '<span class="pill">' + CF.escapeHtml(i.priority) + " priority</span>" +
+      "</div>" +
+      '<p style="color:var(--ink)">' + CF.escapeHtml(i.description || "No description provided.") + "</p>" +
+      '<dl class="detail-grid">' +
+        "<div><dt>Category</dt><dd>" + c.icon + " " + CF.escapeHtml(c.label) + "</dd></div>" +
+        "<div><dt>Assigned team</dt><dd>" + CF.escapeHtml(i.team || "Not assigned yet") + "</dd></div>" +
+        "<div><dt>Address</dt><dd>" + CF.escapeHtml(i.address || "—") + "</dd></div>" +
+        "<div><dt>Coordinates</dt><dd class=\"mono\">" + i.lat.toFixed(5) + ", " + i.lng.toFixed(5) + "</dd></div>" +
+      "</dl>" +
+      '<h3 style="margin:1.3rem 0 .5rem">Photos</h3>' + photos +
+      '<h3 style="margin:1.3rem 0 .3rem">Status trail</h3><ul class="timeline">' + timeline + "</ul>" +
+      '<h3 style="margin:1.3rem 0 .5rem">Crew updates</h3>' + notes;
+
+    CF.openModal("detailModal");
+  }
+
+  /* ---------- map modal ---------- */
+  function openTrack(id) {
+    var i = CF.getIssue(id);
+    if (!i) { return; }
+    activeId = id;
+    CF.$("#mSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.title);
+    CF.$("#mDirections").href = "https://www.openstreetmap.org/directions?to=" + i.lat + "," + i.lng;
+
+    var m = CF.$("#mapModal");
+    m.__onOpen = function () {
+      setTimeout(function () {
+        if (!trackMap) {
+          trackMap = CF.makeMap(CF.$("#trackMap"), { lat: i.lat, lng: i.lng }, 16, { scrollWheelZoom: true });
+          trackMarker = window.L.marker([i.lat, i.lng], {
+            icon: CF.pinIcon(CF.STATUS_COLORS[i.status] || "#1d4ed8", "&#128205;")
+          }).addTo(trackMap);
+        } else {
+          trackMap.setView([i.lat, i.lng], 16);
+          trackMarker.setLatLng([i.lat, i.lng]);
+          trackMarker.setIcon(CF.pinIcon(CF.STATUS_COLORS[i.status] || "#1d4ed8", "&#128205;"));
+        }
+        trackMarker.bindPopup("<b>" + CF.escapeHtml(i.title) + "</b><br>" +
+          CF.escapeHtml(i.address) + "<br>" + i.status).openPopup();
+        trackMap.invalidateSize();
+      }, 60);
+    };
+    CF.openModal("mapModal");
+  }
+
+  /* ---------- events ---------- */
+  CF.$("#feed").addEventListener("click", function (e) {
+    var v = e.target.closest("[data-view]"), mp = e.target.closest("[data-map]");
+    if (v) { openDetail(v.getAttribute("data-view")); }
+    if (mp) { openTrack(mp.getAttribute("data-map")); }
+  });
+  CF.$("#dTrack").addEventListener("click", function () {
+    CF.closeModal("detailModal");
+    setTimeout(function () { openTrack(activeId); }, 120);
+  });
+  CF.$("#search").addEventListener("input", function () { state.q = this.value; renderFeed(); });
+  CF.$("#catFilter").addEventListener("change", function () { state.cat = this.value; renderFeed(); });
+  CF.$("#sortBy").addEventListener("change", function () { state.sort = this.value; renderFeed(); });
+  CF.$("#statusChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) { return; }
+    CF.$$("#statusChips .chip").forEach(function (x) { x.classList.remove("active"); });
+    b.classList.add("active");
+    state.status = b.getAttribute("data-status");
+    renderFeed();
+  });
+
+  CF.$("#menuReports").addEventListener("click", function (e) {
+    e.preventDefault();
+    state.status = "All"; state.q = ""; state.cat = "";
+    CF.$("#search").value = "";
+    CF.$("#catFilter").value = "";
+    CF.$$("#statusChips .chip").forEach(function (x) {
+      x.classList.toggle("active", x.getAttribute("data-status") === "All");
+    });
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    CF.toast("", "My Reports", "Showing all of your filed tickets.");
+  });
+
+  CF.$("#menuProfile").addEventListener("click", function (e) {
+    e.preventDefault();
+    CF.$("#pName").value = session.name;
+    CF.$("#pEmail").value = session.email;
+    CF.openModal("profileModal");
+  });
+  CF.$("#pSave").addEventListener("click", function () {
+    CF.closeModal("profileModal");
+    CF.toast("ok", "Profile saved", "Your details were updated locally.");
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
