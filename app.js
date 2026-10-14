@@ -159,10 +159,10 @@
   function getSession() { return session; }
 
   async function afterAuth() { return loadSession(true); }
-  async function signInGoogle() {
-    await init();
-    await fb.m.signInWithPopup(fb.auth, new fb.m.GoogleAuthProvider());
-    return afterAuth();
+  function signInGoogle() {
+    // no await before the popup when sdk is ready => stays inside the click gesture
+    function pop() { return fb.m.signInWithPopup(fb.auth, new fb.m.GoogleAuthProvider()); }
+    return (fb ? pop() : init().then(pop)).then(afterAuth);
   }
   async function signInEmail(email, password) {
     await init();
