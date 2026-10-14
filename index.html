@@ -44,26 +44,17 @@
       
       <!-- Theme Toggle Button Header Row -->
       <div class="row between" style="margin-bottom: 0.5rem;">
-        <h1>Welcome back</h1>
+        <h1 id="authTitle">Welcome back</h1>
         <button type="button" class="btn btn-outline btn-sm" id="themeToggleBtn" title="Toggle theme">
           &#127769; Theme
         </button>
       </div>
       
-      <p class="muted small" style="margin-bottom:1.2rem">Sign in to report an issue or manage your ward.</p>
+      <p class="muted small" style="margin-bottom:1.2rem" id="authSub">Sign in to report an issue or manage your ward.</p>
 
       <div class="alert" id="loginAlert"></div>
 
-      <!-- Demo role picker: stands in for real account routing -->
-      <div class="demo-role">
-        <label>Demo role</label>
-        <div class="seg" id="roleSeg">
-          <button type="button" class="active" data-role="citizen">&#128100; Citizen</button>
-          <button type="button" data-role="staff">&#127963;&#65039; Municipal staff</button>
-        </div>
-      </div>
-
-      <!-- Primary: Google OAuth (mocked) -->
+      <!-- Primary: Google sign-in (Firebase Auth) -->
       <button class="auth-google" id="googleBtn" type="button">
         <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -76,8 +67,12 @@
 
       <div class="auth-divider">OR</div>
 
-      <!-- Alternative: email + password -->
+      <!-- Alternative: email + password (Firebase Auth) -->
       <form id="emailForm" novalidate>
+        <div class="field hidden" id="fName">
+          <label for="fullName">Full name</label>
+          <input class="input" type="text" id="fullName" placeholder="Your name" autocomplete="name" maxlength="60">
+        </div>
         <div class="field" id="fEmail">
           <label for="email">Email address</label>
           <input class="input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
@@ -93,7 +88,7 @@
       </form>
 
       <p class="center small muted" style="margin-top:1.1rem">
-        New to CivicFix? <a href="#" id="createLink">Create an account</a>
+        <span id="switchText">New to CivicFix?</span> <a href="#" id="createLink">Create an account</a>
       </p>
 
       <div class="auth-legal">
@@ -107,12 +102,14 @@
 
 <div class="toast-wrap"></div>
 
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
 (function () {
-  CF.seed();                   // make sure demo issues exist
-  var role = "citizen";
+  var mode = "signin";           // "signin" | "signup"
+  var googleBtn = CF.$("#googleBtn");
+  var googleHtml = googleBtn.innerHTML;
+  var signInBtn = CF.$("#signInBtn");
 
   /* -------- theme toggle handler -------- */
   const savedTheme = localStorage.getItem('theme') || 'light';
@@ -128,36 +125,60 @@
     });
   }
 
-  /* -------- demo role switch -------- */
-  CF.$$("#roleSeg button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      CF.$$("#roleSeg button").forEach(function (x) { x.classList.remove("active"); });
-      b.classList.add("active");
-      role = b.getAttribute("data-role");
-    });
-  });
-
+  /* -------- helpers -------- */
+  function showAlert(msg) {
+    var a = CF.$("#loginAlert");
+    if (!msg) { a.classList.remove("show"); return; }
+    a.textContent = msg;
+    a.classList.add("show");
+  }
+  function resetButtons() {
+    googleBtn.disabled = false;
+    googleBtn.innerHTML = googleHtml;
+    signInBtn.disabled = false;
+    signInBtn.textContent = mode === "signup" ? "Create account" : "Sign in";
+  }
   function go(session) {
-    CF.toast("ok", "Signed in", session.role === "staff" ? "Opening the municipal console…" : "Opening your dashboard…");
+    CF.toast("ok", "Signed in", session.role === "staff" ? "Opening the municipal console\u2026" : "Opening your dashboard\u2026");
     setTimeout(function () {
-      location.href = session.role === "staff" ? "admin.html" : "dashboard.html";
-    }, 550);
+      CF.navigate(session.role === "staff" ? "admin.html" : "dashboard.html");
+    }, 450);
+  }
+  function fail(err) {
+    resetButtons();
+    var msg = (err && err.status) ? CF.errText(err) : CF.authMessage(err);
+    if (msg) { showAlert(msg); }
   }
 
-  /* -------- mocked Google OAuth: pretend the popup succeeded -------- */
-  CF.$("#googleBtn").addEventListener("click", function () {
-    var btn = this;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner dark"></span> Connecting to Google…';
-    setTimeout(function () {
-      var s = role === "staff"
-        ? CF.login("staff", "ops@city.gov", "Ops Controller")
-        : CF.login("citizen", "aarav.menon@gmail.com", "Aarav Menon");
-      go(s);
-    }, 900);
+  /* -------- sign-in / sign-up mode switch -------- */
+  function setMode(next) {
+    mode = next;
+    var up = mode === "signup";
+    CF.$("#authTitle").textContent = up ? "Create your account" : "Welcome back";
+    CF.$("#authSub").textContent = up ? "Join CivicFix to report and track issues in your area."
+                                      : "Sign in to report an issue or manage your ward.";
+    CF.$("#fName").classList.toggle("hidden", !up);
+    CF.$("#password").setAttribute("autocomplete", up ? "new-password" : "current-password");
+    CF.$("#forgotLink").classList.toggle("hidden", up);
+    CF.$("#switchText").textContent = up ? "Already have an account?" : "New to CivicFix?";
+    CF.$("#createLink").textContent = up ? "Sign in" : "Create an account";
+    signInBtn.textContent = up ? "Create account" : "Sign in";
+    showAlert("");
+  }
+  CF.$("#createLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    setMode(mode === "signin" ? "signup" : "signin");
   });
 
-  /* -------- email + password (mock) -------- */
+  /* -------- Google sign-in (Firebase popup) -------- */
+  googleBtn.addEventListener("click", function () {
+    showAlert("");
+    googleBtn.disabled = true;
+    googleBtn.innerHTML = '<span class="spinner dark"></span> Connecting to Google\u2026';
+    CF.signInGoogle().then(go).catch(fail);
+  });
+
+  /* -------- email + password -------- */
   CF.$("#emailForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var email = CF.$("#email").value.trim();
@@ -168,26 +189,36 @@
     CF.$("#fEmail").classList.toggle("invalid", !okEmail);
     CF.$("#fPass").classList.toggle("invalid", !okPass);
     if (!okEmail || !okPass) {
-      var a = CF.$("#loginAlert");
-      a.textContent = "Please fix the highlighted fields and try again.";
-      a.classList.add("show");
+      showAlert("Please fix the highlighted fields and try again.");
       return;
     }
-    CF.$("#loginAlert").classList.remove("show");
+    showAlert("");
 
-    var btn = CF.$("#signInBtn");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Signing in…';
-    setTimeout(function () {
-      var name = email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-      go(CF.login(role, email, name));
-    }, 800);
+    signInBtn.disabled = true;
+    signInBtn.innerHTML = '<span class="spinner"></span> ' + (mode === "signup" ? "Creating account\u2026" : "Signing in\u2026");
+    var job = mode === "signup"
+      ? CF.signUpEmail(CF.$("#fullName").value.trim(), email, pass)
+      : CF.signInEmail(email, pass);
+    job.then(go).catch(fail);
+  });
+
+  /* -------- forgot password (Firebase reset email) -------- */
+  CF.$("#forgotLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    var email = CF.$("#email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      CF.$("#fEmail").classList.add("invalid");
+      showAlert("Enter your email address above, then click \u201CForgot password?\u201D again.");
+      return;
+    }
+    showAlert("");
+    CF.resetPassword(email)
+      .then(function () { CF.toast("ok", "Check your inbox", "If an account exists, a reset link is on its way."); })
+      .catch(function (err) { showAlert(CF.authMessage(err)); });
   });
 
   /* -------- placeholder links -------- */
-  [["#forgotLink", "Password reset", "A reset link would be emailed to you."],
-    ["#createLink", "Create account", "Self-signup flow is out of scope for this prototype."],
-    [".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
+  [[".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
   .forEach(function (pair) {
     CF.$$(pair[0]).forEach(function (el) {
       el.addEventListener("click", function (e) {
@@ -196,6 +227,14 @@
       });
     });
   });
+
+  /* -------- already signed in? skip the form -------- */
+  if (!CF.firebaseConfigured()) {
+    showAlert("Firebase is not configured yet. Fill in config.js with your project's web config.");
+    return;
+  }
+  CF.loadSession().then(function (s) { if (s) { go(s); } })
+    .catch(function (err) { showAlert(CF.errText(err)); });
 })();
 </script>
 </body>

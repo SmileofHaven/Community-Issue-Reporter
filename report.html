@@ -173,25 +173,15 @@
 <div class="toast-wrap"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-(function () {
-  var session = CF.requireAuth("citizen");
+(async function () {
+  var session = await CF.requireAuth("citizen");
   if (!session) { return; }
   CF.paintShell();
   CF.wireDropdowns();
-
-  // Override CF.makeMap to use Google Maps tiles instead of OpenStreetMap
-  CF.makeMap = function (el, center, zoom) {
-    var m = window.L.map(el).setView([center.lat, center.lng], zoom);
-    window.L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attribution: '&copy; Google Maps'
-    }).addTo(m);
-    return m;
-  };
+  await CF.loadConfig();
 
   var step = 1, MAX = 5;
   var data = { category: "", priority: "Medium", title: "", description: "",
@@ -200,7 +190,7 @@
 
   /* ---------------- category grid ---------------- */
   var grid = CF.$("#catGrid");
-  window.MOCK.categories.forEach(function (c) {
+  CF.categories().forEach(function (c) {
     var b = document.createElement("button");
     b.type = "button";
     b.className = "cat";
@@ -214,6 +204,8 @@
     });
     grid.appendChild(b);
   });
+
+  CF.$("#priority").addEventListener("change", function () { data.priority = this.value; });
 
   /* ---------------- step navigation ---------------- */
   function paint() {
@@ -271,7 +263,9 @@
   });
 
   /* ---------------- map ---------------- */
-  var center = window.MOCK.defaultCenter;
+  var savedLoc = CF.getSavedLocation();
+  var center = (savedLoc && typeof savedLoc.lat === "number" && typeof savedLoc.lng === "number")
+    ? { lat: savedLoc.lat, lng: savedLoc.lng } : CF.defaultCenter();
   map = CF.makeMap(CF.$("#pickMap"), center, 13);
   marker = window.L.marker([center.lat, center.lng], {
     draggable: true, icon: CF.pinIcon("#1d4ed8", "&#128205;"), opacity: 0.55
@@ -420,21 +414,36 @@
   }
 
   /* ---------------- submit / cancel ---------------- */
-  CF.$("#submitBtn").addEventListener("click", function () {
+  var submitting = false;
+  CF.$("#submitBtn").addEventListener("click", async function () {
+    if (submitting) { return; }
     if (!validate(1) || !validate(2) || !validate(3)) { return; }
     var btn = this;
+    submitting = true;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Submitting…';
-    setTimeout(function () {
-      var issue = CF.addIssue(data);
+    btn.innerHTML = '<span class="spinner"></span> ' + (data.photos.length ? "Uploading photos\u2026" : "Submitting\u2026");
+    try {
+      var photos = await CF.uploadPhotos(data.photos);
+      btn.innerHTML = '<span class="spinner"></span> Submitting\u2026';
+      var issue = await CF.createIssue({
+        category: data.category, priority: data.priority,
+        title: data.title, description: data.description,
+        address: (data.address || "").slice(0, 300),
+        lat: data.lat, lng: data.lng, photos: photos
+      });
       CF.toast("ok", "Report submitted", issue.id + " is now with the ward office.");
-      setTimeout(function () { location.href = "dashboard.html?new=" + issue.id; }, 900);
-    }, 1100);
+      setTimeout(function () { CF.navigate("dashboard.html?new=" + encodeURIComponent(issue.id)); }, 900);
+    } catch (err) {
+      submitting = false;
+      btn.disabled = false;
+      btn.textContent = "Submit Report";
+      CF.toast("err", "Could not submit", CF.errText(err));
+    }
   });
 
   CF.$("#cancelBtn").addEventListener("click", function () {
     if (confirm("Discard this draft and return to your dashboard?")) {
-      location.href = "dashboard.html";
+      CF.navigate("dashboard.html");
     }
   });
 

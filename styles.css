@@ -545,3 +545,33 @@ table.data tbody tr:hover{background:var(--line)}
 .map-fallback strong{font-size:.85rem;color:#fff}
 .map-fallback span{font-size:.76rem;opacity:.85}
 .map-box{position:relative}
+
+/* ============================================================ near-me (dashboard) */
+.loc-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:.9rem 1.15rem;margin-bottom:1.1rem}
+.loc-info{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.loc-info strong{color:var(--ink);font-size:.98rem}
+.loc-controls{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.loc-controls .input-group .input{min-width:200px;padding:.5rem .7rem;font-size:.86rem}
+.loc-controls .select{width:auto;padding:.5rem .7rem;font-size:.86rem}
+.loc-controls .btn{padding:.5rem .8rem;font-size:.85rem}
+
+.nearby-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.6rem;align-items:start}
+.nbox{overflow:hidden}
+.nbox .card-head h2{font-size:1rem}
+.nlist{display:grid;gap:.1rem;max-height:420px;overflow-y:auto;padding:.45rem}
+.nitem{display:grid;grid-template-columns:48px 1fr auto;gap:.75rem;align-items:center;padding:.6rem .65rem;border-radius:12px;cursor:pointer;transition:.14s ease}
+.nitem:hover,.nitem:focus-visible{background:var(--card-head-bg);outline:none}
+.nitem .issue-thumb{width:48px;height:48px;font-size:1.25rem;overflow:hidden}
+.nmain{min-width:0}
+.nmain h4{margin:0 0 .15rem;font-size:.92rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nmain .issue-meta{gap:.55rem;font-size:.75rem}
+.nside{display:flex;flex-direction:column;align-items:flex-end;gap:.35rem}
+.nside .btn{padding:.2rem .5rem;font-size:.8rem}
+.nempty{padding:1.6rem 1rem;text-align:center;margin:0}
+.section-title{margin:0 0 .8rem;font-size:1.15rem}
+
+@media (max-width:900px){
+  .nearby-grid{grid-template-columns:1fr}
+  .loc-controls{width:100%}
+  .loc-controls .input-group{flex:1 1 100%}
+}
