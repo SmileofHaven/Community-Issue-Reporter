@@ -8,7 +8,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "dev": "vercel dev",
     "set-admin": "node --env-file=.env scripts/set-admin.js"
   },
   "license": "MIT",

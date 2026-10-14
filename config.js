@@ -6,10 +6,10 @@
    ========================================================================== */
 window.CF_CONFIG = {
   firebase: {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyB6MiI8bP_kdkEAW1f65I4BWC24HX5tzps",
+    authDomain: "civilfix-f6118.firebaseapp.com",
+    projectId: "civilfix-f6118",
+    appId: "1:700323920618:web:b73cb78c8b03be09fe7593"
   },
 
   // Firebase web SDK version loaded from Google's CDN (change here only).
