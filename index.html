@@ -111,6 +111,9 @@
   var googleHtml = googleBtn.innerHTML;
   var signInBtn = CF.$("#signInBtn");
 
+  // preload firebase sdk so the popup opens inside the click gesture
+  CF.init().catch(function () {});
+
   /* -------- theme toggle handler -------- */
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
