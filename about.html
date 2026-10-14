@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CivicFix — About & Info</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand-logo" href="dashboard.html" style="text-decoration:none">
+    <span class="brand-mark">&#127959;&#65039;</span>
+    <span>CivicFix</span>
+  </a>
+
+  <div class="topbar-search">
+    <span class="ico">&#128269;</span>
+    <input class="input" type="search" placeholder="Search reports…" disabled aria-label="Search">
+  </div>
+
+  <nav class="topbar-links">
+    <a class="navlink" href="dashboard.html">Dashboard</a>
+    <a class="navlink active" href="about.html">About &amp; Info</a>
+    <a class="navlink" href="report.html">Report Issue</a>
+    <a class="navlink" data-role-only="staff" href="admin.html">Admin Console</a>
+
+    <div class="dropdown" style="margin-left:.4rem">
+      <button class="avatar" data-toggle="dropdown" type="button" title="Account menu" data-user-initials>CF</button>
+      <div class="dropdown-menu">
+        <div class="dropdown-head">
+          <strong data-user-name>User</strong>
+          <span data-user-email>user@civicfix.local</span>
+        </div>
+        <a class="dropdown-item" href="dashboard.html">&#128203; My Dashboard</a>
+        <a class="dropdown-item danger" href="#" data-logout>&#10162; Log Out</a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main class="page">
+  <section class="hero" style="text-align: center; padding: 3rem 2rem;">
+    <div style="max-width: 700px; margin: 0 auto;">
+      <span class="pill" style="margin-bottom: 1rem; display: inline-block;">Welcome to CivicFix</span>
+      <h1 style="font-size: 2.3rem; color: #fff; margin-bottom: 0.8rem;">Got any problems? Just snap it and post!</h1>
+      <p style="font-size: 1.05rem; opacity: 0.95; margin-bottom: 1.5rem;">
+        CivicFix is your direct community platform to report potholes, overflowing drains, broken streetlights, and urban hazards instantly. We bridge the communication gap between citizens and municipal repair crews.
+      </p>
+      <div class="row" style="justify-content: center; gap: 0.8rem;">
+        <a class="btn btn-primary btn-lg" href="report.html" style="background: #fff; color: var(--brand-700);">&#43; Report New Issue</a>
+        <a class="btn btn-outline btn-lg" href="dashboard.html" style="color: #fff; border-color: rgba(255,255,255,0.4)">View Dashboard</a>
+      </div>
+    </div>
+  </section>
+
+  <h2 style="text-align: center; margin: 2rem 0 1.2rem;">How CivicFix Works</h2>
+  <div class="stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+    <div class="stat" style="text-align: center; padding: 1.5rem 1rem;">
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📸</div>
+      <div class="k" style="font-size: 1rem; color: var(--ink); margin-bottom: 0.3rem;">1. Snap &amp; Upload</div>
+      <div class="d">Take a photo of any civic issue directly from your smartphone camera or gallery.</div>
+    </div>
+    <div class="stat violet" style="text-align: center; padding: 1.5rem 1rem;">
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📍</div>
+      <div class="k" style="font-size: 1rem; color: var(--ink); margin-bottom: 0.3rem;">2. Pin Location</div>
+      <div class="d">Drop an exact pin on the interactive map so municipal crews can locate the exact spot.</div>
+    </div>
+    <div class="stat ok" style="text-align: center; padding: 1.5rem 1rem;">
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">⚡</div>
+      <div class="k" style="font-size: 1rem; color: var(--ink); margin-bottom: 0.3rem;">3. Track to Resolved</div>
+      <div class="d">Follow ticket statuses live from New to Assigned, In Progress, and Closed.</div>
+    </div>
+  </div>
+
+  <div class="card card-pad" style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <h2>Empowering Cleaner &amp; Safer Neighbourhoods</h2>
+    <p style="color: var(--body); margin-top: 0.5rem;">
+      Traditional municipal reporting is often slow and opaque. CivicFix brings transparency and accountability to city governance, ensuring every voice and report is heard, tracked, and acted upon efficiently by local authorities.
+    </p>
+  </div>
+</main>
+
+<div class="toast-wrap"></div>
+
+<script src="mockData.js"></script>
+<script src="app.js"></script>
+<script>
+(function () {
+  var session = CF.requireAuth();
+  if (!session) { return; }
+  CF.paintShell();
+  CF.wireDropdowns();
+})();
+</script>
+</body>
+</html>

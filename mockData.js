@@ -4,12 +4,12 @@
    ========================================================================== */
 window.MOCK = {
   categories: [
-    { id: "pothole",     label: "Pothole",            icon: "\uD83D\uDD73\uFE0F" },
-    { id: "drainage",    label: "Drainage / Overflow", icon: "\uD83C\uDF0A" },
-    { id: "streetlight", label: "Streetlight Out",     icon: "\uD83D\uDCA1" },
-    { id: "garbage",     label: "Garbage Dump",        icon: "\uD83D\uDDD1\uFE0F" },
-    { id: "water",       label: "Water Leakage",       icon: "\uD83D\uDEB0" },
-    { id: "other",       label: "Other",               icon: "\uD83D\uDCCD" }
+    { id: "pothole",      label: "Pothole",            icon: "🕳️" },
+    { id: "drainage",     label: "Drainage / Overflow", icon: "🌊" },
+    { id: "streetlight",  label: "Streetlight Out",     icon: "💡" },
+    { id: "garbage",      label: "Garbage Dump",        icon: "🗑️" },
+    { id: "water",        label: "Water Leakage",       icon: "🚰" },
+    { id: "other",        label: "Other",               icon: "📍" }
   ],
 
   teams: [

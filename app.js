@@ -1,6 +1,6 @@
 /* ==========================================================================
    CivicFix — shared application logic (vanilla JS, zero dependencies)
-   Handles: mock auth, localStorage data store, UI helpers, toasts, modals,
+   Handles: auth, localStorage data store, UI helpers, toasts, modals,
             image previews, Leaflet map helpers, geocoding.
    ========================================================================== */
 (function (global) {
@@ -11,7 +11,6 @@
   var STATUSES    = ["New", "Assigned", "In Progress", "Closed"];
 
   /* ============================================================== theme init */
-  // Apply saved theme immediately on script load to prevent flashing
   var savedTheme = localStorage.getItem("theme") || "light";
   document.documentElement.setAttribute("data-theme", savedTheme);
 
@@ -55,7 +54,7 @@
       lat: data.lat,
       lng: data.lng,
       createdAt: now,
-      reporter: s ? s.email : "citizen@demo.gov",
+      reporter: s ? s.email : "guest@civicfix.local",
       photos: data.photos || [],
       notes: [],
       history: [{ status: "New", at: now }]
@@ -120,23 +119,29 @@
     try { return JSON.parse(localStorage.getItem(KEY_SESSION) || "null"); } catch (e) { return null; }
   }
   function initials(name) {
-    return String(name || "C F").trim().split(/\s+/).slice(0, 2)
+    return String(name || "U").trim().split(/\s+/).slice(0, 2)
       .map(function (w) { return w.charAt(0).toUpperCase(); }).join("");
   }
+  
+  // Fixed login function: Removed hardcoded placeholder defaults like "Aarav Menon"
   function login(role, email, name) {
+    var userRole = role || "citizen";
+    var userEmail = email || "";
+    var userName = name || (userEmail ? userEmail.split("@")[0] : "User");
+
     var s = {
-      email: email || (role === "staff" ? "ops@city.gov" : "citizen@demo.gov"),
-      name: name || (role === "staff" ? "Ops Controller" : "Aarav Menon"),
-      role: role || "citizen",
+      email: userEmail,
+      name: userName,
+      role: userRole,
       at: new Date().toISOString()
     };
     s.initials = initials(s.name);
     localStorage.setItem(KEY_SESSION, JSON.stringify(s));
     return s;
   }
+
   function logout() { localStorage.removeItem(KEY_SESSION); }
 
-  /* Redirects to login when signed out, or to the right console for the role. */
   function requireAuth(want) {
     var s = getSession();
     if (!s) { location.replace("index.html"); return null; }
