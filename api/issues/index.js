@@ -6,6 +6,7 @@ const { parseNewIssue, parseListQuery } = require('../../lib/validate');
 const { serializeIssue } = require('../../lib/serialize');
 const { LIMITS } = require('../../lib/config');
 const geo = require('../../lib/geo');
+const { triage } = require('../../lib/triage');
 
 function matchesStatus(status, filter) {
   if (filter === 'open') { return status !== 'Closed'; }
@@ -56,6 +57,8 @@ async function list(req) {
 async function create(req) {
   const user = await authenticate(req);
   const input = parseNewIssue(readJson(req), process.env.CLOUDINARY_CLOUD_NAME);
+  // ai call stays outside the transaction (transactions retry)
+  const ai = await triage(input);
   const admin = getAdmin();
   const db = getDb();
   const Timestamp = admin.firestore.Timestamp;
@@ -81,17 +84,18 @@ async function create(req) {
     doc = {
       title: input.title,
       description: input.description,
-      category: input.category,
-      priority: input.priority,
-      status: 'New',
-      team: '',
+      category: ai ? ai.category : input.category,
+      priority: ai ? ai.priority : input.priority,
+      status: ai && ai.team ? 'Assigned' : 'New',
+      team: ai ? ai.team : '',
       address: input.address,
       lat: input.lat,
       lng: input.lng,
       geohash: geo.hashFor(input.lat, input.lng),
       photos: input.photos,
       notes: [],
-      history: [{ status: 'New', at: iso }],
+      history: ai && ai.team ? [{ status: 'New', at: iso }, { status: 'Assigned', at: iso }] : [{ status: 'New', at: iso }],
+      ai: ai ? { category: ai.category, priority: ai.priority, reason: ai.reason, confidence: ai.confidence } : null,
       reporterUid: user.uid,
       reporterEmail: user.email,
       createdAt: now,
