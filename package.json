@@ -2,7 +2,7 @@
   "name": "civicfix-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Serverless API (Vercel Functions + Firebase Auth/Firestore + Cloudinary) for the Community Issue Reporter",
+  "description": "Serverless API (Vercel Functions + Firebase Auth/Firestore + Cloudinary) for CivicFix — Report. Fix. Build a better city.",
   "engines": {
     "node": ">=20"
   },

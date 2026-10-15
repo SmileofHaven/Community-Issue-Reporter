@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CivicFix — Municipal console</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -16,7 +17,7 @@
   <!-- ============================== SIDEBAR ============================== -->
   <aside class="sidebar">
     <div class="brand-logo">
-      <span class="brand-mark">&#127959;&#65039;</span><span>CivicFix Ops</span>
+      <span class="brand-mark"><img src="assets/civicfix-logo.svg" alt="CivicFix logo"></span><span>CivicFix Ops</span>
     </div>
 
     <div class="side-label">Workspace</div>
@@ -39,6 +40,7 @@
   <div class="admin-main">
 
     <div class="admin-bar">
+      <span class="admin-bar-logo"><img src="assets/civicfix-logo.svg" alt=""></span>
       <strong id="viewTitle" style="font-size:1.05rem;color:var(--ink)">Overview &amp; Analytics</strong>
       <button class="btn btn-outline btn-sm" id="refreshBtn" type="button" style="margin-left:auto" title="Reload tickets">&#8635; Refresh</button>
       <div class="topbar-search" style="max-width:340px">
@@ -365,16 +367,25 @@
   }
   function cardHtml(i) {
     var c = CF.catMeta(i.category);
+    var reporter = (i && typeof i.reporterName === "string" && i.reporterName.trim()) ? i.reporterName.trim() : "Anonymous";
+    var pclass = i.priority === "High" ? "p-high" : i.priority === "Low" ? "p-low" : "p-med";
     return '<article class="kcard" draggable="true" data-id="' + CF.escapeHtml(i.id) + '">' +
+      '<div class="kcard-top">' +
+        '<span class="kcat">' + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
+        '<span class="priChip ' + pclass + '">' + CF.escapeHtml(i.priority) + "</span>" +
+      "</div>" +
       "<h4>" + CF.escapeHtml(i.title) + "</h4>" +
-      '<div class="km"><span class="mono">' + CF.escapeHtml(i.id) + "</span><span>" + c.icon + " " +
-        CF.escapeHtml(c.label) + "</span><span>" + CF.escapeHtml(i.priority) + "</span></div>" +
+      '<div class="km">' +
+        '<span class="mono">' + CF.escapeHtml(i.id) + "</span>" +
+        '<span class="reporter-chip">&#128100; ' + CF.escapeHtml(reporter) + "</span>" +
+        '<span class="filed">&#128337; ' + CF.timeAgo(i.createdAt) + "</span>" +
+      "</div>" +
       '<div class="ka">' +
         '<button class="btn btn-outline btn-sm" data-act="assign">Assign Team</button>' +
         '<button class="btn btn-outline btn-sm" data-act="status">Change Status</button>' +
         '<button class="btn btn-outline btn-sm" data-act="map">View on Map</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="photo">&#128247; View Photo</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="note">Add Internal Note</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="photo">&#128247; Photo</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="note">Note</button>' +
       "</div></article>";
   }
 
@@ -382,12 +393,16 @@
   function renderKanban() {
     var list = filtered();
     var host = CF.$("#kanban");
+    host.classList.add("kanban-v2");
     host.innerHTML = CF.STATUSES.map(function (st) {
       var cards = list.filter(function (i) { return i.status === st; });
+      var empty = cards.length
+        ? cards.map(cardHtml).join("")
+        : '<div class="kcard-empty">Drop here</div>';
       return '<div class="kcol" data-status="' + st + '">' +
         '<div class="kcol-head"><h3><span class="dot"></span>' + st + "</h3>" +
         '<span class="kcount">' + cards.length + "</span></div>" +
-        '<div class="kcards">' + cards.map(cardHtml).join("") + "</div></div>";
+        '<div class="kcards">' + empty + "</div></div>";
     }).join("");
   }
 
@@ -527,9 +542,12 @@
     var bounds = [];
     list.forEach(function (i) {
       bounds.push([i.lat, i.lng]);
+      var reporter = (i && typeof i.reporterName === "string" && i.reporterName.trim()) ? i.reporterName.trim() : "Anonymous";
       window.L.marker([i.lat, i.lng], { icon: CF.pinIcon(CF.STATUS_COLORS[i.status]) })
-        .bindPopup("<b>" + CF.escapeHtml(i.title) + "</b><br>" + CF.escapeHtml(i.address) +
-                   "<br>" + CF.badge(i.status) + " &middot; " + CF.escapeHtml(i.team || "Unassigned"))
+        .bindPopup("<b>" + CF.escapeHtml(i.title) + "</b><br>" +
+                   "Reported by " + CF.escapeHtml(reporter) + "<br>" +
+                   CF.escapeHtml(i.address) + "<br>" +
+                   CF.badge(i.status) + " &middot; " + CF.escapeHtml(i.team || "Unassigned"))
         .addTo(adminLayer);
     });
     if (bounds.length) { adminMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); }
@@ -588,10 +606,11 @@
     CF.$("#amMeta").innerHTML =
       "<div><dt>Status</dt><dd>" + i.status + "</dd></div>" +
       "<div><dt>Priority</dt><dd>" + CF.escapeHtml(i.priority) + "</dd></div>" +
+      "<div><dt>Reported by</dt><dd>&#128100; " + CF.escapeHtml((i.reporterName || "Anonymous").trim()) + "</dd></div>" +
       "<div><dt>Team</dt><dd>" + CF.escapeHtml(i.team || "Unassigned") + "</dd></div>" +
       "<div><dt>Filed</dt><dd>" + CF.fmtDate(i.createdAt, true) + "</dd></div>" +
       "<div><dt>Coordinates</dt><dd class=\"mono\">" + i.lat.toFixed(5) + ", " + i.lng.toFixed(5) + "</dd></div>" +
-      "<div><dt>Reporter</dt><dd>" + CF.escapeHtml(i.reporterEmail || "\u2014") + "</dd></div>";
+      "<div><dt>Reporter email</dt><dd>" + CF.escapeHtml(i.reporterEmail || "\u2014") + "</dd></div>";
 
     var modal = CF.$("#adminMapModal");
     modal.__onOpen = function () {

@@ -1,6 +1,6 @@
-# Community Issue Reporter — Backend
+# CivicFix — Backend (a renamed and rebased build of "Community Issue Reporter")
 
-Serverless REST API for the issue reporter. **100% free tier, no credit card needed.**
+Serverless REST API for CivicFix — report civic issues, see who reported each one, dispatch to crews, close the loop. **100% free tier, no credit card needed.**
 
 | Piece | Service |
 |---|---|
@@ -74,7 +74,7 @@ Errors: `{ "error": "message", "details": { "field": "reason" } }`.
 `open` = New / Assigned / In Progress, `fixed` = Closed. Assigning a team to a *New* issue moves it to *Assigned*.
 
 ## Data model (Firestore)
-- `issues/{CF-####}`: title, description, category, priority, status, team, address, lat, lng, `geohash`, photos[], notes[], history[], reporterUid, reporterEmail, createdAt, updatedAt, closedAt?
+- `issues/{CF-####}`: title, description, category, priority, status, team, address, lat, lng, `geohash`, photos[], notes[], history[], reporterUid, reporterEmail, reporterName, createdAt, updatedAt, closedAt?
 - `users/{uid}`: uid, email, name, role (mirror of the claim), createdAt, lastReportAt
 - `meta/counters`: `{ issue: <last number> }` for ticket ids
 
@@ -82,7 +82,7 @@ Errors: `{ "error": "message", "details": { "field": "reason" } }`.
 - Identity and role come only from the verified Firebase ID token; admin routes also check for revoked tokens.
 - Firestore rules deny all direct client access; the API validates every input (lengths, enums, coordinates).
 - Photo URLs must be HTTPS Cloudinary URLs from *your* cloud name (blocks `javascript:` / foreign URLs).
-- Citizens never see reporter identity or internal notes. One report per user every 30 s (anti-spam).
+- Citizens now see the reporter's **display name** on every card and detail view (so social accountability works); reporter *email* remains admin-only. Internal notes remain admin-only. One report per user every 30 s (anti-spam).
 - Output is JSON only; the frontend must still HTML-escape text it renders.
 
 ## Free-tier limits to keep in mind

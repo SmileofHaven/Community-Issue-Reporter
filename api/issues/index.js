@@ -78,6 +78,10 @@ async function create(req) {
     issueId = 'CF-' + next;
     const now = Timestamp.now();
     const iso = now.toDate().toISOString();
+    /* reporterName: per-report display name provided by the user. Falls back to a sanitised email
+       local part so older clients and missing-name reports still get a sensible attribution. */
+    const fallbackName = (user.email || 'Citizen').split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const reporterName = (input.reporterName && input.reporterName.trim()) || user.name || fallbackName;
     doc = {
       title: input.title,
       description: input.description,
@@ -94,6 +98,7 @@ async function create(req) {
       history: [{ status: 'New', at: iso }],
       reporterUid: user.uid,
       reporterEmail: user.email,
+      reporterName: reporterName.slice(0, 60),
       createdAt: now,
       updatedAt: now
     };

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+  <defs>
+    <linearGradient id="cf-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="cf-pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="cf-rim" x1="0" y1="0" x2="2" y2="2">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#cf-rim)"/>
+  <circle cx="32" cy="32" r="26" fill="#ffffff"/>
+  <!-- sky / city block (abstract municipal feel) -->
+  <rect x="8" y="22" width="48" height="20" rx="3" fill="url(#cf-bg)"/>
+  <rect x="14" y="26" width="6" height="14" fill="#ffffff" opacity=".85"/>
+  <rect x="22" y="26" width="6" height="14" fill="#ffffff" opacity=".55"/>
+  <rect x="36" y="26" width="6" height="14" fill="#ffffff" opacity=".55"/>
+  <rect x="44" y="26" width="6" height="14" fill="#ffffff" opacity=".85"/>
+  <path d="M30 22h4v20h-4z" fill="#1d4ed8"/>
+  <path d="M28 42h8v2h-8z" fill="#1d4ed8"/>
+  <!-- green field -->
+  <rect x="6" y="42" width="52" height="14" fill="#10b981"/>
+  <!-- pin -->
+  <path d="M32 8c-7 0-12 5-12 12 0 9 12 22 12 22s12-13 12-22c0-7-5-12-12-12z"
+        fill="url(#cf-pin)" stroke="#172554" stroke-width="1.5"/>
+  <!-- wrench inside pin -->
+  <path d="M27 18a4 4 0 0 1 4-1l-1 3 2 1 3-1a4 4 0 0 1-1 4l-7 7 1 1-2 2-3-3 2-2 1 1 7-7z"
+        fill="#ffffff" transform="rotate(-20 32 22)"/>
+</svg>
