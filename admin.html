@@ -268,6 +268,22 @@
   </div>
 </div>
 
+<!-- ============================== VIEW PHOTO MODAL ============================== -->
+<div class="modal" id="photoModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div><h2 id="photoTitle">Uploaded Photo</h2><p class="small muted" style="margin:0" id="photoSub">&mdash;</p></div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div id="photoContainer" style="display:flex; flex-direction:column; gap:1rem; align-items:center; justify-content:center;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -357,6 +373,7 @@
         '<button class="btn btn-outline btn-sm" data-act="assign">Assign Team</button>' +
         '<button class="btn btn-outline btn-sm" data-act="status">Change Status</button>' +
         '<button class="btn btn-outline btn-sm" data-act="map">View on Map</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="photo">&#128247; View Photo</button>' +
         '<button class="btn btn-outline btn-sm" data-act="note">Add Internal Note</button>' +
       "</div></article>";
   }
@@ -435,6 +452,7 @@
           '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + CF.escapeHtml(i.id) + '">Assign</button>' +
           '<button class="btn btn-outline btn-sm" data-act="status" data-id="' + CF.escapeHtml(i.id) + '">Status</button>' +
           '<button class="btn btn-outline btn-sm" data-act="map" data-id="' + CF.escapeHtml(i.id) + '">Map</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="photo" data-id="' + CF.escapeHtml(i.id) + '">&#128247; Photo</button>' +
           '<button class="btn btn-outline btn-sm" data-act="note" data-id="' + CF.escapeHtml(i.id) + '">Note</button>' +
           '<button class="btn btn-danger btn-sm" data-act="delete" data-id="' + CF.escapeHtml(i.id) + '" title="Delete spam or duplicate">Delete</button>' +
         "</div></td></tr>";
@@ -591,6 +609,28 @@
     };
     CF.openModal("adminMapModal");
   }
+  function openPhotoModal(id) {
+    var i = getIssue(id); if (!i) { return; }
+    activeId = id;
+    CF.$("#photoTitle").textContent = i.title;
+    CF.$("#photoSub").innerHTML = '<span class="mono">' + CF.escapeHtml(i.id) + "</span> &middot; " + CF.escapeHtml(i.address);
+
+    var container = CF.$("#photoContainer");
+    if (i.photos && i.photos.length > 0) {
+      container.innerHTML = i.photos.map(function (p) {
+        var src = (p && (p.url || p.data)) || p;
+        return '<div style="max-width:100%; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow);">' +
+               '<img src="' + CF.escapeHtml(String(src)) + '" alt="Issue photo" style="width:100%; max-height:75vh; object-fit:contain; display:block; background:#000;">' +
+               "</div>";
+      }).join("");
+    } else {
+      container.innerHTML = '<div style="padding:2.5rem 1rem; color:var(--muted);">' +
+                            '<span style="font-size:2.5rem; display:block; margin-bottom:.5rem;">&#128247;</span>' +
+                            "<strong>No photos uploaded for this report.</strong></div>";
+    }
+    CF.openModal("photoModal");
+  }
+
   function openNote(id) {
     var i = getIssue(id); if (!i) { return; }
     activeId = id;
@@ -616,6 +656,7 @@
       if (act === "status") { openStatus(id); }
       if (act === "map") { openMapModal(id); }
       if (act === "note") { openNote(id); }
+      if (act === "photo") { openPhotoModal(id); }
       if (act === "delete") { deleteTicket(id); }
       return;
     }

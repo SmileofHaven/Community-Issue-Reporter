@@ -409,3 +409,25 @@ test('admin: reporter email is shown on the map dialog; API errors surface as to
   assert.equal(p.$('#sSave').disabled, false, 'button is re-enabled after failure');
   noErrors(p);
 });
+
+test('admin: view photo modal shows uploaded photos, or an empty state when there are none', async () => {
+  seed();
+  fb.store.get('issues/CF-1101').photos = [
+    { url: 'https://res.cloudinary.com/democloud/image/upload/a.jpg', name: 'a.jpg' },
+    { url: 'https://res.cloudinary.com/democloud/image/upload/b.jpg', name: 'b.jpg' }
+  ];
+  const p = await openPage('admin.html', { token: 'admin1' });
+  await waitFor(() => text(p.$('#ovTotal')) === '6 total', 'overview loaded');
+  click(p.$('[data-nav="issues"]'));
+  await waitFor(() => p.$$('.kcard').length === 6, 'kanban cards');
+
+  click(p.$('.kcard[data-id="CF-1101"] [data-act="photo"]'));
+  assert.ok(p.$('#photoModal').classList.contains('open'));
+  assert.deepEqual(p.$$('#photoContainer img').map((i) => i.getAttribute('src')),
+    ['https://res.cloudinary.com/democloud/image/upload/a.jpg', 'https://res.cloudinary.com/democloud/image/upload/b.jpg']);
+
+  click(p.$('#photoModal [data-close]'));
+  click(p.$('.kcard[data-id="CF-1102"] [data-act="photo"]'));
+  assert.equal(p.$$('#photoContainer img').length, 0);
+  assert.match(text(p.$('#photoContainer')), /No photos uploaded/);
+});

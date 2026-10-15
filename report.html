@@ -266,7 +266,7 @@
   var savedLoc = CF.getSavedLocation();
   var center = (savedLoc && typeof savedLoc.lat === "number" && typeof savedLoc.lng === "number")
     ? { lat: savedLoc.lat, lng: savedLoc.lng } : CF.defaultCenter();
-  map = CF.makeMap(CF.$("#pickMap"), center, 13);
+  map = CF.makeMap(CF.$("#pickMap"), center, 13, { scrollWheelZoom: true });
   marker = window.L.marker([center.lat, center.lng], {
     draggable: true, icon: CF.pinIcon("#1d4ed8", "&#128205;"), opacity: 0.55
   }).addTo(map);
