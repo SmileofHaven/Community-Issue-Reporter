@@ -1,0 +1,46 @@
+FRONTEND <-> BACKEND CONNECTION (done) + WHAT STILL NEEDS YOU
+============================================================
+Base: upstream commit b27d851 ("dark theme map fix").
+
+ONE-TIME SETUP (required, the app cannot sign in without it)
+  1. Firebase console -> Project settings -> Your apps -> add a Web app -> copy the config
+     into config.js (apiKey, authDomain, projectId, appId). It is public, not a secret.
+  2. Firebase -> Authentication -> Settings -> Authorized domains: add your *.vercel.app domain.
+  3. Serve the site from Vercel (or `vercel dev`). Opening the HTML files directly (file://)
+     will not work because /api/* only exists on the server.
+
+WHAT CHANGED
+  config.js (new)      Firebase web config, SDK version, API base, default map centre.
+  mockData.js          Deleted. Categories/teams now come from GET /api/config
+                       (icons stay in app.js, keyed by category id).
+  app.js               localStorage store + fake login replaced by: Firebase Auth (loaded from
+                       Google's CDN), api() client that sends the ID token, issue endpoints,
+                       Cloudinary photo upload, near-me helpers, CF.navigate() for redirects.
+                       Roles: server "admin"/"user" are shown as "staff"/"citizen" in the UI.
+  index.html           Real Google + email/password sign-in, "Create an account" mode,
+                       forgot-password email. Demo role picker removed. Routes by server role.
+  dashboard.html       NEW location bar + two boxes: "Open issues near me" and "Fixed issues near
+                       me" (one API call, split client-side), radius picker, GPS / place search.
+                       "My reports" (stats + filterable feed) now loads ?mine=1.
+                       Profile modal keeps only the display name (stored in Firebase Auth);
+                       phone / e-mail-notification fields removed (no backend for them).
+  report.html          Photos upload to Cloudinary on submit, then POST /api/issues.
+                       Google-tile override removed (app.js already provides the map).
+                       FIXED an existing bug: the Severity dropdown was never read (everything
+                       was sent as "Medium").
+  admin.html           Loads GET /api/admin/issues; assign / status / note = PATCH;
+                       Delete button (table view) = DELETE; Refresh button added.
+                       Dragging to "Assigned" without a team opens the Assign dialog (no more
+                       silent auto-assign). Dispatch + internal notes are staff-only; notes added
+                       with a status change are visible to the reporter. Reporter = reporterEmail.
+                       Settings page is still a demo (toast says so).
+  styles.css           Appended styles for the location bar and near-me boxes.
+  tests/frontend.test.js  Loads the real pages in jsdom against the real API handlers.
+
+THINGS TO KNOW
+  - Map tiles: app.js still uses Google's unofficial tile URL chosen in the last commit.
+    It works today but is not a supported API and can be blocked. To switch to OpenStreetMap
+    change GMAPS_TILES / subdomains in CF.makeMap (app.js) - one place.
+  - "Near me" reads every issue in the surrounding area from Firestore (free plan has daily
+    read limits): the page loads once per visit, plus the Refresh button. No polling.
+  - After someone is promoted to admin they must sign out and back in.

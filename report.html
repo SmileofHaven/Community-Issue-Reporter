@@ -50,22 +50,64 @@
 </main>
 
 <div class="toast-wrap"></div>
-<script src="mockData.js"></script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-(function () {
-  var session = CF.requireAuth("citizen");
-  if (!session) return;
+(async function () {
+  var session = await CF.requireAuth("citizen");
+  if (!session) { return; }
   CF.paintShell();
+  CF.wireDropdowns();
+  await CF.loadConfig();
 
-  CF.$("#reportForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var title = CF.$("#title").value.trim();
-    var desc = CF.$("#desc").value.trim();
-    var addr = CF.$("#address").value.trim();
-    if (!title || !desc) {
-      CF.toast("err", "Missing info", "Please fill in all required fields.");
-      return;
+  var step = 1, MAX = 5;
+  var data = { category: "", priority: "Medium", title: "", description: "",
+               address: "", lat: null, lng: null, photos: [] };
+  var map = null, marker = null, geoMarker = null;
+
+  /* ---------------- category grid ---------------- */
+  var grid = CF.$("#catGrid");
+  CF.categories().forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "cat";
+    b.setAttribute("data-cat", c.id);
+    b.innerHTML = '<span class="em">' + c.icon + '</span><span class="lb">' + c.label + "</span>";
+    b.addEventListener("click", function () {
+      CF.$$(".cat").forEach(function (x) { x.classList.remove("selected"); });
+      b.classList.add("selected");
+      data.category = c.id;
+      CF.$("#catError").style.display = "none";
+    });
+    grid.appendChild(b);
+  });
+
+  CF.$("#priority").addEventListener("change", function () { data.priority = this.value; });
+
+  /* ---------------- step navigation ---------------- */
+  function paint() {
+    CF.$$(".step-panel").forEach(function (p) {
+      p.classList.toggle("active", Number(p.getAttribute("data-panel")) === step);
+    });
+    CF.$$("#stepper .step").forEach(function (s) {
+      var n = Number(s.getAttribute("data-step"));
+      s.classList.toggle("active", n === step);
+      s.classList.toggle("done", n < step);
+    });
+    CF.$("#backBtn").disabled = step === 1;
+    CF.$("#nextBtn").classList.toggle("hidden", step === MAX);
+    CF.$("#submitBtn").classList.toggle("hidden", step !== MAX);
+    if (step === MAX) { paintReview(); }
+    if (step === 3 && map) { setTimeout(function () { map.invalidateSize(); }, 60); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function validate(n) {
+    var ok = true;
+    if (n === 1 && !data.category) {
+      CF.$("#catError").style.display = "block"; ok = false;
     }
     CF.addIssue({
       title: title,
@@ -80,6 +122,197 @@
     CF.toast("ok", "Report posted!", "Your issue has been submitted successfully.");
     setTimeout(function () { location.href = "dashboard.html"; }, 900);
   });
+
+  CF.$("#desc").addEventListener("input", function () {
+    CF.$("#descCount").textContent = this.value.length;
+  });
+
+  /* ---------------- map ---------------- */
+  var savedLoc = CF.getSavedLocation();
+  var center = (savedLoc && typeof savedLoc.lat === "number" && typeof savedLoc.lng === "number")
+    ? { lat: savedLoc.lat, lng: savedLoc.lng } : CF.defaultCenter();
+  map = CF.makeMap(CF.$("#pickMap"), center, 13);
+  marker = window.L.marker([center.lat, center.lng], {
+    draggable: true, icon: CF.pinIcon("#1d4ed8", "&#128205;"), opacity: 0.55
+  }).addTo(map);
+
+  function setPoint(lat, lng, address, quiet) {
+    data.lat = lat; data.lng = lng;
+    marker.setLatLng([lat, lng]);
+    marker.setOpacity(1);
+    CF.$("#coords").textContent = lat.toFixed(5) + ", " + lng.toFixed(5);
+    CF.$("#locError").style.display = "none";
+    if (address) {
+      data.address = address;
+      CF.$("#address").value = address;
+    } else {
+      CF.$("#address").value = "Resolving address…";
+      CF.reverseGeocode(lat, lng).then(function (r) {
+        var a = (r && r.display_name) ? r.display_name : (lat.toFixed(5) + ", " + lng.toFixed(5));
+        data.address = a;
+        CF.$("#address").value = a;
+      }).catch(function () {
+        data.address = lat.toFixed(5) + ", " + lng.toFixed(5);
+        CF.$("#address").value = data.address;
+      });
+    }
+    if (!quiet) { CF.toast("", "Location set", "Pin dropped — you can drag it for precision."); }
+  }
+
+  map.on("click", function (e) { setPoint(e.latlng.lat, e.latlng.lng, null); });
+  marker.on("dragend", function () {
+    var p = marker.getLatLng();
+    setPoint(p.lat, p.lng, null, true);
+  });
+
+  CF.$("#geoBtn").addEventListener("click", doSearch);
+  CF.$("#geoSearch").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); doSearch(); }
+  });
+  function doSearch() {
+    var q = CF.$("#geoSearch").value.trim();
+    if (!q) { CF.toast("err", "Nothing to search", "Type a street, landmark or postcode."); return; }
+    var btn = CF.$("#geoBtn");
+    btn.disabled = true; btn.innerHTML = '<span class="spinner dark"></span> Searching';
+    CF.geocode(q).then(function (rows) {
+      btn.disabled = false; btn.textContent = "Search";
+      if (!rows || !rows.length) { CF.toast("err", "No match found", "Try a nearby landmark or a postcode."); return; }
+      var r = rows[0];
+      var lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+      map.setView([lat, lng], 17);
+      setPoint(lat, lng, r.display_name, true);
+      CF.toast("ok", "Found it", "Address resolved and pin moved.");
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = "Search";
+      CF.toast("err", "Search failed", "Geocoding service unreachable — drop the pin manually.");
+    });
+  }
+
+  CF.$("#gpsBtn").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner dark"></span> Locating…';
+    CF.getPosition().then(function (pos) {
+      btn.disabled = false; btn.innerHTML = "&#128205; Use My Current GPS Location";
+      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      map.setView([lat, lng], 18);
+      setPoint(lat, lng, null, true);
+      CF.toast("ok", "GPS locked", "Pin placed at your current position.");
+    }).catch(function () {
+      btn.disabled = false; btn.innerHTML = "&#128205; Use My Current GPS Location";
+      CF.toast("err", "Location unavailable", "Permission denied or no GPS fix — drop the pin manually.");
+    });
+  });
+
+  /* ---------------- photos ---------------- */
+  function addFiles(files) {
+    var list = Array.prototype.slice.call(files).filter(function (f) {
+      return /^image\//.test(f.type);
+    });
+    if (!list.length) { CF.toast("err", "Unsupported file", "Only JPEG, PNG or WebP images are accepted."); return; }
+    Promise.all(list.map(CF.readImage)).then(function (out) {
+      out.forEach(function (o) {
+        if (data.photos.length >= 6) { return; }
+        data.photos.push(o);
+      });
+      if (data.photos.length >= 6) { CF.toast("", "Photo limit", "Six photos is the maximum per report."); }
+      paintThumbs();
+      CF.toast("ok", "Photo added", data.photos.length + " photo(s) attached.");
+    }).catch(function () { CF.toast("err", "Could not read image", "Try another file."); });
+  }
+  function paintThumbs() {
+    var box = CF.$("#thumbs");
+    box.innerHTML = data.photos.map(function (p, idx) {
+      return '<div class="thumb"><img src="' + p.data + '" alt="' + CF.escapeHtml(p.name) + '">' +
+             '<button class="x" type="button" data-rm="' + idx + '" title="Remove">&#10005;</button></div>';
+    }).join("");
+  }
+  CF.$("#thumbs").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-rm]");
+    if (!b) { return; }
+    data.photos.splice(Number(b.getAttribute("data-rm")), 1);
+    paintThumbs();
+    CF.toast("", "Photo removed", "The attachment was discarded.");
+  });
+  CF.$("#browseBtn").addEventListener("click", function () { CF.$("#fileBrowse").click(); });
+  CF.$("#cameraBtn").addEventListener("click", function () { CF.$("#fileCamera").click(); });
+  CF.$("#dropzone").addEventListener("click", function (e) {
+    if (e.target.closest("button")) { return; }
+    CF.$("#fileBrowse").click();
+  });
+  CF.$("#fileBrowse").addEventListener("change", function () { addFiles(this.files); this.value = ""; });
+  CF.$("#fileCamera").addEventListener("change", function () { addFiles(this.files); this.value = ""; });
+
+  ["dragenter", "dragover"].forEach(function (ev) {
+    CF.$("#dropzone").addEventListener(ev, function (e) {
+      e.preventDefault(); this.classList.add("drag");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    CF.$("#dropzone").addEventListener(ev, function (e) {
+      e.preventDefault(); this.classList.remove("drag");
+    });
+  });
+  CF.$("#dropzone").addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) { addFiles(e.dataTransfer.files); }
+  });
+
+  /* ---------------- review ---------------- */
+  function paintReview() {
+    var c = CF.catMeta(data.category);
+    CF.$("#review").innerHTML = [
+      ["Category", c.icon + " " + CF.escapeHtml(c.label)],
+      ["Severity", CF.escapeHtml(data.priority)],
+      ["Title", CF.escapeHtml(data.title)],
+      ["Description", CF.escapeHtml(data.description)],
+      ["Address", CF.escapeHtml(data.address || "—")],
+      ["Coordinates", data.lat !== null ? data.lat.toFixed(5) + ", " + data.lng.toFixed(5) : "—"],
+      ["Photos", data.photos.length + " attached"]
+    ].map(function (r) {
+      return '<div class="review-row"><b>' + r[0] + "</b><span>" + r[1] + "</span></div>";
+    }).join("");
+
+    CF.$("#reviewThumbs").innerHTML = data.photos.length
+      ? '<div class="thumbs">' + data.photos.map(function (p) {
+          return '<div class="thumb"><img src="' + p.data + '" alt=""></div>';
+        }).join("") + "</div>"
+      : "";
+  }
+
+  /* ---------------- submit / cancel ---------------- */
+  var submitting = false;
+  CF.$("#submitBtn").addEventListener("click", async function () {
+    if (submitting) { return; }
+    if (!validate(1) || !validate(2) || !validate(3)) { return; }
+    var btn = this;
+    submitting = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> ' + (data.photos.length ? "Uploading photos\u2026" : "Submitting\u2026");
+    try {
+      var photos = await CF.uploadPhotos(data.photos);
+      btn.innerHTML = '<span class="spinner"></span> Submitting\u2026';
+      var issue = await CF.createIssue({
+        category: data.category, priority: data.priority,
+        title: data.title, description: data.description,
+        address: (data.address || "").slice(0, 300),
+        lat: data.lat, lng: data.lng, photos: photos
+      });
+      CF.toast("ok", "Report submitted", issue.id + " is now with the ward office.");
+      setTimeout(function () { CF.navigate("dashboard.html?new=" + encodeURIComponent(issue.id)); }, 900);
+    } catch (err) {
+      submitting = false;
+      btn.disabled = false;
+      btn.textContent = "Submit Report";
+      CF.toast("err", "Could not submit", CF.errText(err));
+    }
+  });
+
+  CF.$("#cancelBtn").addEventListener("click", function () {
+    if (confirm("Discard this draft and return to your dashboard?")) {
+      CF.navigate("dashboard.html");
+    }
+  });
+
+  paint();
 })();
 </script>
 </body>

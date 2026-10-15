@@ -11,6 +11,7 @@
 </head>
 <body>
 
+<!-- ============================== TOP NAVIGATION ============================== -->
 <header class="topbar">
   <a class="brand-logo" href="dashboard.html" style="text-decoration:none">
     <span class="brand-mark">&#127959;&#65039;</span>
@@ -24,18 +25,20 @@
 
   <nav class="topbar-links">
     <a class="navlink active" href="dashboard.html">Dashboard</a>
-    <a class="navlink" href="report.html">&#43; Report Issue</a>
-    <a class="navlink" href="index.html">About / Home</a>
+    <a class="navlink" href="report.html">Report Issue</a>
+    <a class="navlink" href="about.html">About &amp; Info</a>
     <a class="navlink" data-role-only="staff" href="admin.html">Admin Console</a>
 
     <div class="dropdown" style="margin-left:.4rem">
-      <button class="avatar" data-toggle="dropdown" type="button" title="Account menu" data-user-initials>AM</button>
+      <button class="avatar" data-toggle="dropdown" type="button" title="Account menu"
+              data-user-initials>AM</button>
       <div class="dropdown-menu">
         <div class="dropdown-head">
-          <strong data-user-name>User</strong>
+          <strong data-user-name>Aarav Menon</strong>
           <span data-user-email>citizen@demo.gov</span>
         </div>
-        <a class="dropdown-item" href="index.html">&#127968; Home / About Page</a>
+        <a class="dropdown-item" href="#" id="menuProfile">&#9881;&#65039; Profile Settings</a>
+        <a class="dropdown-item" href="#" id="menuReports">&#128203; My Reports</a>
         <a class="dropdown-item danger" href="#" data-logout>&#10162; Log Out</a>
       </div>
     </div>
@@ -43,23 +46,60 @@
 </header>
 
 <main class="page">
+
+  <!-- ============================== HERO + CTA ============================== -->
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <h1>Welcome back, <span data-user-name>Citizen</span> &#128075;</h1>
-        <p>Got a problem in your neighbourhood? Snap it, post it, and track it live!</p>
+        <h1>Good to see you, <span data-user-name>Aarav</span> &#128075;</h1>
+        <p>Spotted something broken in your neighbourhood? Drop a pin, add a photo, and the right crew gets it.</p>
       </div>
       <a class="btn btn-primary btn-lg" href="report.html">&#43; Report New Issue</a>
     </div>
   </section>
 
+  <!-- ============================== STAT CARDS ============================== -->
   <section class="stats" id="stats">
-    <div class="stat"><div class="k">Total Reported</div><div class="v" id="sTotal">0</div></div>
-    <div class="stat warn"><div class="k">Pending</div><div class="v" id="sPending">0</div></div>
-    <div class="stat violet"><div class="k">In Progress</div><div class="v" id="sProgress">0</div></div>
-    <div class="stat ok"><div class="k">Resolved</div><div class="v" id="sClosed">0</div></div>
+    <div class="stat"><div class="k">Total Reported</div><div class="v" id="sTotal">0</div><div class="d">Reports you filed</div></div>
+    <div class="stat warn"><div class="k">Pending</div><div class="v" id="sPending">0</div><div class="d">Awaiting triage</div></div>
+    <div class="stat violet"><div class="k">In Progress</div><div class="v" id="sProgress">0</div><div class="d">Crews on the ground</div></div>
+    <div class="stat ok"><div class="k">Resolved</div><div class="v" id="sClosed">0</div><div class="d">Closed tickets</div></div>
   </section>
 
+  <!-- ============================== LOCATION BAR ============================== -->
+  <section class="card loc-bar" id="locBar">
+    <div class="loc-info">
+      <strong>&#128205; <span id="locLabel">Finding your location&hellip;</span></strong>
+      <span class="small muted" id="locNote">Issues are shown within the radius you choose.</span>
+    </div>
+    <div class="loc-controls">
+      <div class="input-group">
+        <input class="input" id="locSearch" type="text" placeholder="Search another area&hellip;" aria-label="Search another area">
+        <button class="btn btn-outline" id="locSearchBtn" type="button">Go</button>
+      </div>
+      <button class="btn btn-outline" id="locGps" type="button">&#128205; Use my location</button>
+      <select class="select" id="radiusSel" aria-label="Search radius">
+        <option value="1">1 km</option><option value="2">2 km</option><option value="5">5 km</option>
+        <option value="10">10 km</option><option value="25">25 km</option>
+      </select>
+      <button class="btn btn-outline" id="refreshBtn" type="button" title="Refresh">&#8635; Refresh</button>
+    </div>
+  </section>
+
+  <!-- ============================== NEAR ME: OPEN + FIXED ============================== -->
+  <section class="nearby-grid">
+    <div class="card nbox">
+      <div class="card-head"><h2>&#128679; Open issues near me</h2><span class="pill" id="openCount">0</span></div>
+      <div class="nlist" id="openList"><p class="small muted nempty">Loading&hellip;</p></div>
+    </div>
+    <div class="card nbox">
+      <div class="card-head"><h2>&#9989; Fixed issues near me</h2><span class="pill" id="fixedCount">0</span></div>
+      <div class="nlist" id="fixedList"><p class="small muted nempty">Loading&hellip;</p></div>
+    </div>
+  </section>
+
+  <!-- ============================== MY REPORTS ============================== -->
+  <h2 class="section-title" id="myReports">My reports</h2>
   <div class="filter-bar">
     <div class="chips" id="statusChips">
       <button class="chip active" data-status="All">All</button>
@@ -68,43 +108,502 @@
       <button class="chip" data-status="In Progress">In Progress</button>
       <button class="chip" data-status="Closed">Closed</button>
     </div>
+    <div style="flex:1"></div>
+    <select class="select" id="catFilter" aria-label="Filter by category">
+      <option value="">All categories</option>
+    </select>
+    <select class="select" id="sortBy" aria-label="Sort reports">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="priority">Priority</option>
+    </select>
   </div>
 
+  <!-- ============================== ISSUE FEED ============================== -->
   <section class="feed" id="feed"></section>
+
 </main>
 
+<!-- Mobile sticky CTA -->
 <a class="fab" href="report.html">&#43; Report New Issue</a>
 
+<!-- ============================== DETAIL MODAL ============================== -->
+<div class="modal" id="detailModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div>
+        <h2 id="dTitle">Issue</h2>
+        <p class="small muted" style="margin:0" id="dSub">—</p>
+      </div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body" id="dBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+      <button class="btn btn-primary" id="dTrack" type="button">&#128506;&#65039; Track on Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MAP MODAL ============================== -->
+<div class="modal" id="mapModal">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div>
+        <h2>Track on Map</h2>
+        <p class="small muted" style="margin:0" id="mSub">—</p>
+      </div>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="map-box" id="trackMap"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Close</button>
+      <a class="btn btn-primary" id="mDirections" href="#" target="_blank" rel="noopener">Open directions</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== PROFILE MODAL ============================== -->
+<div class="modal" id="profileModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Profile Settings</h2>
+      <button class="modal-x" data-close type="button">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="pName">Display name</label>
+        <input class="input" id="pName" type="text">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="pEmail">Email address</label>
+        <input class="input" id="pEmail" type="email" readonly>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="pSave" type="button">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-(function () {
-  var session = CF.requireAuth("citizen");
+(async function () {
+  var session = await CF.requireAuth("citizen");
   if (!session) { return; }
-  CF.seed();
   CF.paintShell();
   CF.wireDropdowns();
+  CF.wireModals();
+  await CF.loadConfig();
 
-  function render() {
-    var all = CF.getIssues();
+  var saved = CF.getSavedLocation();
+  var state = {
+    q: "", status: "All", cat: "", sort: "new",
+    mine: [], open: [], fixed: [],
+    loc: null,
+    radiusKm: (saved && saved.radiusKm) || (window.CF_CONFIG && window.CF_CONFIG.nearbyRadiusKm) || 5,
+    loadingMine: true, loadingNear: true, mineError: "", nearError: ""
+  };
+  var activeId = null;
+  var trackMap = null, trackMarker = null;
+  var nearSeq = 0;
+
+  /* ---------- category filter options ---------- */
+  var catSel = CF.$("#catFilter");
+  CF.categories().forEach(function (c) {
+    var o = document.createElement("option");
+    o.value = c.id; o.textContent = c.icon + " " + c.label;
+    catSel.appendChild(o);
+  });
+  CF.$("#radiusSel").value = String(state.radiusKm);
+  if (!CF.$("#radiusSel").value) { CF.$("#radiusSel").value = "5"; state.radiusKm = 5; }
+
+  /* ---------- helpers ---------- */
+  function findIssue(id) {
+    var all = state.mine.concat(state.open, state.fixed);
+    for (var n = 0; n < all.length; n++) { if (all[n].id === id) { return all[n]; } }
+    return null;
+  }
+  function matchesQ(i) {
+    var q = state.q.toLowerCase();
+    if (!q) { return true; }
+    return (i.id + " " + i.title + " " + i.address + " " + i.status + " " +
+            CF.catMeta(i.category).label).toLowerCase().indexOf(q) > -1;
+  }
+  function thumbHtml(i, size) {
+    var c = CF.catMeta(i.category);
+    return i.photos && i.photos.length
+      ? '<img src="' + CF.escapeHtml(CF.thumb(i.photos[0].url, size)) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'
+      : c.icon;
+  }
+  function errBox(msg) {
+    return '<p class="small nempty" style="color:var(--danger)">&#9888;&#65039; ' + CF.escapeHtml(msg) + "</p>";
+  }
+
+  /* ---------- my reports (stats + feed) ---------- */
+  function visible() {
+    var list = state.mine.filter(function (i) {
+      if (state.status !== "All" && i.status !== state.status) { return false; }
+      if (state.cat && i.category !== state.cat) { return false; }
+      return matchesQ(i);
+    });
+    var pr = { High: 0, Medium: 1, Low: 2 };
+    list.sort(function (a, b) {
+      if (state.sort === "old") { return new Date(a.createdAt) - new Date(b.createdAt); }
+      if (state.sort === "priority") { return (pr[a.priority] === undefined ? 9 : pr[a.priority]) - (pr[b.priority] === undefined ? 9 : pr[b.priority]); }
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    return list;
+  }
+
+  function renderStats() {
+    var all = state.mine;
     CF.$("#sTotal").textContent = all.length;
     CF.$("#sPending").textContent = all.filter(function (i) { return i.status === "New"; }).length;
     CF.$("#sProgress").textContent = all.filter(function (i) { return i.status === "In Progress"; }).length;
     CF.$("#sClosed").textContent = all.filter(function (i) { return i.status === "Closed"; }).length;
+  }
 
-    CF.$("#feed").innerHTML = all.map(function (i) {
+  function renderFeed() {
+    var feed = CF.$("#feed");
+    if (state.loadingMine) { feed.innerHTML = '<div class="card empty"><strong>Loading your reports&hellip;</strong></div>'; return; }
+    if (state.mineError) { feed.innerHTML = '<div class="card empty">' + errBox(state.mineError) + "</div>"; return; }
+    var list = visible();
+    if (!list.length) {
+      feed.innerHTML = state.mine.length
+        ? '<div class="card empty"><span class="em">&#128269;</span><strong>No reports match your filters.</strong>' +
+          '<p class="small" style="margin:.4rem 0 0">Try clearing the search box or picking another status.</p></div>'
+        : '<div class="card empty"><span class="em">&#128221;</span><strong>You haven\u2019t reported anything yet.</strong>' +
+          '<p class="small" style="margin:.4rem 0 .9rem">Spotted a problem nearby? It takes under a minute.</p>' +
+          '<a class="btn btn-primary" href="report.html">&#43; Report New Issue</a></div>';
+      return;
+    }
+    feed.innerHTML = list.map(function (i) {
       var c = CF.catMeta(i.category);
       return '<article class="issue">' +
-        '<div class="issue-thumb">' + c.icon + "</div>" +
-        '<div class="issue-main"><h3>' + CF.escapeHtml(i.title) + '</h3>' +
-        '<div class="issue-meta"><span class="mono">' + i.id + '</span><span>📍 ' + CF.escapeHtml(i.address) + '</span></div></div>' +
-        '<div class="issue-actions">' + CF.badge(i.status) + '</div>' +
-        '</article>';
+        '<div class="issue-thumb">' + thumbHtml(i, 128) + "</div>" +
+        '<div class="issue-main">' +
+          "<h3>" + CF.escapeHtml(i.title) + "</h3>" +
+          '<div class="issue-meta">' +
+            '<span class="mono">' + CF.escapeHtml(i.id) + "</span>" +
+            "<span>" + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
+            "<span>&#128205; " + CF.escapeHtml(i.address || "No address") + "</span>" +
+            "<span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
+            (i.team ? "<span>&#128101; " + CF.escapeHtml(i.team) + "</span>" : "") +
+          "</div>" +
+        "</div>" +
+        '<div class="issue-actions">' + CF.badge(i.status) +
+          '<button class="btn btn-outline btn-sm" data-view="' + CF.escapeHtml(i.id) + '">View Details</button>' +
+          '<button class="btn btn-outline btn-sm" data-map="' + CF.escapeHtml(i.id) + '">&#128506;&#65039; Track on Map</button>' +
+        "</div></article>";
     }).join("");
   }
+
+  /* ---------- near me (open + fixed boxes) ---------- */
+  function nearItem(i) {
+    var c = CF.catMeta(i.category);
+    return '<article class="nitem" data-view="' + CF.escapeHtml(i.id) + '" tabindex="0">' +
+      '<div class="issue-thumb">' + thumbHtml(i, 96) + "</div>" +
+      '<div class="nmain"><h4>' + CF.escapeHtml(i.title) + "</h4>" +
+        '<div class="issue-meta">' +
+          "<span>" + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
+          (typeof i.distanceKm === "number" ? "<span>&#128207; " + CF.fmtKm(i.distanceKm) + "</span>" : "") +
+          "<span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
+        "</div></div>" +
+      '<div class="nside">' + CF.badge(i.status) +
+        '<button class="btn btn-outline btn-sm" data-map="' + CF.escapeHtml(i.id) + '" title="Track on map">&#128506;&#65039;</button>' +
+      "</div></article>";
+  }
+  function renderNear() {
+    var open = state.open.filter(matchesQ), fixed = state.fixed.filter(matchesQ);
+    CF.$("#openCount").textContent = open.length;
+    CF.$("#fixedCount").textContent = fixed.length;
+    var openBox = CF.$("#openList"), fixedBox = CF.$("#fixedList");
+    if (state.loadingNear) {
+      openBox.innerHTML = fixedBox.innerHTML = '<p class="small muted nempty">Loading&hellip;</p>';
+      return;
+    }
+    if (state.nearError) { openBox.innerHTML = fixedBox.innerHTML = errBox(state.nearError); return; }
+    var km = state.radiusKm + " km";
+    openBox.innerHTML = open.length ? open.map(nearItem).join("")
+      : '<p class="small muted nempty">No open issues within ' + km + ". &#127881;</p>";
+    fixedBox.innerHTML = fixed.length ? fixed.map(nearItem).join("")
+      : '<p class="small muted nempty">No fixed issues within ' + km + " yet.</p>";
+  }
+
+  function render() { renderStats(); renderFeed(); renderNear(); }
+
+  /* ---------- data loading ---------- */
+  async function loadMine() {
+    state.loadingMine = true; state.mineError = ""; renderFeed();
+    try { state.mine = (await CF.myIssues()).issues; }
+    catch (e) { state.mine = []; state.mineError = CF.errText(e); }
+    state.loadingMine = false;
+    renderStats(); renderFeed();
+  }
+
+  // One request for both boxes (status=all), split client-side: half the Firestore reads of two calls.
+  async function loadNearby() {
+    var loc = state.loc;
+    if (!loc) { return; }
+    var seq = ++nearSeq;
+    state.loadingNear = true; state.nearError = ""; renderNear();
+    try {
+      var res = await CF.nearbyIssues({ lat: loc.lat, lng: loc.lng, radiusKm: state.radiusKm, status: "all", limit: 100 });
+      if (seq !== nearSeq) { return; }  // a newer search started meanwhile
+      state.open = res.issues.filter(function (i) { return i.status !== "Closed"; });
+      state.fixed = res.issues.filter(function (i) { return i.status === "Closed"; });
+    } catch (e) {
+      if (seq !== nearSeq) { return; }
+      state.open = []; state.fixed = []; state.nearError = CF.errText(e);
+    }
+    state.loadingNear = false;
+    renderNear();
+  }
+
+  /* ---------- location handling ---------- */
+  function placeLabel(r) {
+    var a = (r && r.address) || {};
+    var parts = [a.neighbourhood || a.suburb || a.road, a.city || a.town || a.village || a.county].filter(Boolean);
+    if (parts.length) { return parts.join(", "); }
+    return r && r.display_name ? r.display_name.split(",").slice(0, 2).join(",").trim() : "";
+  }
+  function paintLocation() {
+    var l = state.loc;
+    CF.$("#locLabel").textContent = l ? (l.label || (l.lat.toFixed(4) + ", " + l.lng.toFixed(4))) : "Finding your location\u2026";
+  }
+  function applyLocation(loc, persist) {
+    state.loc = loc;
+    paintLocation();
+    if (persist) { CF.saveLocation(Object.assign({}, loc, { radiusKm: state.radiusKm })); }
+    loadNearby();
+    if (!loc.label) {            // look up a readable name without blocking the issue lists
+      CF.reverseGeocode(loc.lat, loc.lng).then(function (r) {
+        var label = placeLabel(r);
+        if (state.loc !== loc || !label) { return; }
+        loc.label = label;
+        paintLocation();
+        if (persist) { CF.saveLocation(Object.assign({}, loc, { radiusKm: state.radiusKm })); }
+      }).catch(function () { /* label is cosmetic */ });
+    }
+  }
+  function useGps(quiet) {
+    var btn = CF.$("#locGps");
+    btn.disabled = true; btn.innerHTML = '<span class="spinner dark"></span> Locating\u2026';
+    return CF.getPosition().then(function (pos) {
+      applyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, source: "gps" }, true);
+      CF.$("#locNote").textContent = "Using your current GPS position.";
+    }).catch(function () {
+      if (!quiet) { CF.toast("err", "Location unavailable", "Permission denied or no GPS fix \u2014 search an area instead."); }
+      throw new Error("no gps");
+    }).then(function () { btn.disabled = false; btn.innerHTML = "&#128205; Use my location"; },
+            function (e) { btn.disabled = false; btn.innerHTML = "&#128205; Use my location"; throw e; });
+  }
+  function useDefault() {
+    var d = CF.defaultCenter();
+    applyLocation({ lat: d.lat, lng: d.lng, label: d.address || "Default area", source: "default" }, false);
+    CF.$("#locNote").textContent = "Showing the default area \u2014 use \u201CUse my location\u201D or search to change it.";
+  }
+  function initLocation() {
+    var s = CF.getSavedLocation();
+    if (s && typeof s.lat === "number" && typeof s.lng === "number") {
+      applyLocation(s, false);
+      CF.$("#locNote").textContent = s.source === "gps" ? "Using your last known GPS position." : "Showing your last searched area.";
+      return;
+    }
+    useGps(true).catch(useDefault);
+  }
+
+  CF.$("#locGps").addEventListener("click", function () { useGps(false).catch(function () {}); });
+  function searchArea() {
+    var q = CF.$("#locSearch").value.trim();
+    if (!q) { CF.toast("err", "Nothing to search", "Type a neighbourhood, street or postcode."); return; }
+    var btn = CF.$("#locSearchBtn");
+    btn.disabled = true; btn.innerHTML = '<span class="spinner dark"></span>';
+    CF.geocode(q).then(function (rows) {
+      btn.disabled = false; btn.textContent = "Go";
+      if (!rows || !rows.length) { CF.toast("err", "No match found", "Try a nearby landmark or a postcode."); return; }
+      var r = rows[0];
+      applyLocation({ lat: parseFloat(r.lat), lng: parseFloat(r.lon),
+        label: (r.display_name || q).split(",").slice(0, 2).join(",").trim(), source: "search" }, true);
+      CF.$("#locNote").textContent = "Showing issues around the area you searched.";
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = "Go";
+      CF.toast("err", "Search failed", "The address service is unreachable. Try again shortly.");
+    });
+  }
+  CF.$("#locSearchBtn").addEventListener("click", searchArea);
+  CF.$("#locSearch").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); searchArea(); } });
+  CF.$("#radiusSel").addEventListener("change", function () {
+    state.radiusKm = Number(this.value);
+    if (state.loc && state.loc.source !== "default") { CF.saveLocation(Object.assign({}, state.loc, { radiusKm: state.radiusKm })); }
+    loadNearby();
+  });
+  CF.$("#refreshBtn").addEventListener("click", function () { loadMine(); loadNearby(); });
+
+  /* ---------- detail modal ---------- */
+  function openDetail(id) {
+    var i = findIssue(id);
+    if (!i) { return; }
+    activeId = id;
+    var c = CF.catMeta(i.category);
+    CF.$("#dTitle").textContent = i.title;
+    CF.$("#dSub").innerHTML = '<span class="mono">' + CF.escapeHtml(i.id) + "</span> &middot; " +
+      c.icon + " " + CF.escapeHtml(c.label) + " &middot; filed " + CF.fmtDate(i.createdAt, true);
+
+    var photos = (i.photos || []).length
+      ? '<div class="thumbs">' + i.photos.map(function (p) {
+          return '<div class="thumb"><a href="' + CF.escapeHtml(p.url) + '" target="_blank" rel="noopener">' +
+                 '<img src="' + CF.escapeHtml(CF.thumb(p.url, 480, 360)) + '" alt="report photo" loading="lazy"></a></div>';
+        }).join("") + "</div>"
+      : '<p class="small muted">No photos attached.</p>';
+
+    var timeline = (i.history || []).map(function (h) {
+      return "<li><strong>" + CF.escapeHtml(h.status) + "</strong><span>" + CF.fmtDate(h.at, true) + "</span></li>";
+    }).join("");
+
+    var notes = (i.notes || []).length
+      ? '<ul class="note-list">' + i.notes.map(function (n) {
+          return "<li><b>" + CF.escapeHtml(n.by) + " &middot; " + CF.fmtDate(n.at, true) + "</b>" +
+                 CF.escapeHtml(n.text) + "</li>";
+        }).join("") + "</ul>"
+      : '<p class="small muted">No updates posted yet.</p>';
+
+    CF.$("#dBody").innerHTML =
+      '<div class="row between wrap" style="margin-bottom:1rem">' +
+        CF.badge(i.status) +
+        "<span>" +
+          (i.isMine ? '<span class="pill">Your report</span> ' : "") +
+          (typeof i.distanceKm === "number" ? '<span class="pill">' + CF.fmtKm(i.distanceKm) + " away</span> " : "") +
+          '<span class="pill">' + CF.escapeHtml(i.priority) + " priority</span>" +
+        "</span>" +
+      "</div>" +
+      '<p style="color:var(--ink)">' + CF.escapeHtml(i.description || "No description provided.") + "</p>" +
+      '<dl class="detail-grid">' +
+        "<div><dt>Category</dt><dd>" + c.icon + " " + CF.escapeHtml(c.label) + "</dd></div>" +
+        "<div><dt>Assigned team</dt><dd>" + CF.escapeHtml(i.team || "Not assigned yet") + "</dd></div>" +
+        "<div><dt>Address</dt><dd>" + CF.escapeHtml(i.address || "\u2014") + "</dd></div>" +
+        '<div><dt>Coordinates</dt><dd class="mono">' + Number(i.lat).toFixed(5) + ", " + Number(i.lng).toFixed(5) + "</dd></div>" +
+      "</dl>" +
+      '<h3 style="margin:1.3rem 0 .5rem">Photos</h3>' + photos +
+      '<h3 style="margin:1.3rem 0 .3rem">Status trail</h3><ul class="timeline">' + timeline + "</ul>" +
+      '<h3 style="margin:1.3rem 0 .5rem">Crew updates</h3>' + notes;
+
+    CF.openModal("detailModal");
+  }
+
+  /* ---------- map modal ---------- */
+  function openTrack(id) {
+    var i = findIssue(id);
+    if (!i) { return; }
+    activeId = id;
+    CF.$("#mSub").innerHTML = '<span class="mono">' + CF.escapeHtml(i.id) + "</span> &middot; " + CF.escapeHtml(i.title);
+    CF.$("#mDirections").href = "https://www.google.com/maps/dir/?api=1&destination=" + i.lat + "," + i.lng;
+
+    var m = CF.$("#mapModal");
+    m.__onOpen = function () {
+      setTimeout(function () {
+        var icon = CF.pinIcon(CF.STATUS_COLORS[i.status] || "#1d4ed8", "&#128205;");
+        if (!trackMap) {
+          trackMap = CF.makeMap(CF.$("#trackMap"), { lat: i.lat, lng: i.lng }, 16, { scrollWheelZoom: true });
+          trackMarker = window.L.marker([i.lat, i.lng], { icon: icon }).addTo(trackMap);
+        } else {
+          trackMap.setView([i.lat, i.lng], 16);
+          trackMarker.setLatLng([i.lat, i.lng]);
+          trackMarker.setIcon(icon);
+        }
+        trackMarker.bindPopup("<b>" + CF.escapeHtml(i.title) + "</b><br>" +
+          CF.escapeHtml(i.address) + "<br>" + CF.escapeHtml(i.status)).openPopup();
+        trackMap.invalidateSize();
+      }, 60);
+    };
+    CF.openModal("mapModal");
+  }
+
+  /* ---------- events ---------- */
+  function onListClick(e) {
+    var mp = e.target.closest("[data-map]");
+    if (mp) { openTrack(mp.getAttribute("data-map")); return; }
+    var v = e.target.closest("[data-view]");
+    if (v) { openDetail(v.getAttribute("data-view")); }
+  }
+  CF.$("#feed").addEventListener("click", onListClick);
+  CF.$("#openList").addEventListener("click", onListClick);
+  CF.$("#fixedList").addEventListener("click", onListClick);
+  [CF.$("#openList"), CF.$("#fixedList")].forEach(function (box) {
+    box.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") { return; }
+      var v = e.target.closest(".nitem");
+      if (v) { openDetail(v.getAttribute("data-view")); }
+    });
+  });
+  CF.$("#dTrack").addEventListener("click", function () {
+    CF.closeModal("detailModal");
+    setTimeout(function () { openTrack(activeId); }, 120);
+  });
+  CF.$("#search").addEventListener("input", function () { state.q = this.value; renderNear(); renderFeed(); });
+  CF.$("#catFilter").addEventListener("change", function () { state.cat = this.value; renderFeed(); });
+  CF.$("#sortBy").addEventListener("change", function () { state.sort = this.value; renderFeed(); });
+  CF.$("#statusChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) { return; }
+    CF.$$("#statusChips .chip").forEach(function (x) { x.classList.remove("active"); });
+    b.classList.add("active");
+    state.status = b.getAttribute("data-status");
+    renderFeed();
+  });
+
+  CF.$("#menuReports").addEventListener("click", function (e) {
+    e.preventDefault();
+    state.status = "All"; state.q = ""; state.cat = "";
+    CF.$("#search").value = "";
+    CF.$("#catFilter").value = "";
+    CF.$$("#statusChips .chip").forEach(function (x) {
+      x.classList.toggle("active", x.getAttribute("data-status") === "All");
+    });
+    render();
+    CF.$("#myReports").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* ---------- profile (display name is stored in Firebase Auth) ---------- */
+  CF.$("#menuProfile").addEventListener("click", function (e) {
+    e.preventDefault();
+    var s = CF.getSession();
+    CF.$("#pName").value = s.name;
+    CF.$("#pEmail").value = s.email;
+    CF.openModal("profileModal");
+  });
+  CF.$("#pSave").addEventListener("click", function () {
+    var name = CF.$("#pName").value.trim();
+    if (name.length < 2 || name.length > 60) { CF.toast("err", "Check your name", "Use between 2 and 60 characters."); return; }
+    var btn = this;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving\u2026';
+    CF.updateDisplayName(name).then(function (s) {
+      CF.$$("[data-user-name]").forEach(function (el) { el.textContent = s.name; });
+      CF.$$("[data-user-initials]").forEach(function (el) { el.textContent = s.initials; });
+      CF.closeModal("profileModal");
+      CF.toast("ok", "Profile saved", "Your display name was updated.");
+    }).catch(function (err) {
+      CF.toast("err", "Could not save", CF.authMessage(err));
+    }).then(function () { btn.disabled = false; btn.textContent = "Save changes"; });
+  });
+
+  /* ---------- go ---------- */
+  var justFiled = CF.qs("new");
+  if (justFiled) {
+    CF.toast("ok", "Report submitted", justFiled + " is now with the ward office.");
+    history.replaceState(null, "", "dashboard.html");
+  }
   render();
+  loadMine();
+  initLocation();
 })();
 </script>
 </body>

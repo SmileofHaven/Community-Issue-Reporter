@@ -1,0 +1,21 @@
+{
+  "name": "civicfix-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless API (Vercel Functions + Firebase Auth/Firestore + Cloudinary) for the Community Issue Reporter",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "set-admin": "node --env-file=.env scripts/set-admin.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "geofire-common": "^6.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.2"
+  }
+}

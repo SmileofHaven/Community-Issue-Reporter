@@ -63,24 +63,17 @@
   <div class="modal-card" style="max-width: 440px;">
     <div class="modal-head">
       <div>
-        <h2>Sign in to CivicFix</h2>
-        <p class="small muted" style="margin:0">Choose your role to jump into reporting or municipal ops.</p>
+        <h2 id="authTitle">Welcome back</h2>
+        <p class="small muted" style="margin:0" id="authSub">Sign in to report an issue or manage your ward.</p>
       </div>
       <button class="modal-x" data-close type="button">&#10005;</button>
     </div>
     <div class="modal-body">
       <div class="alert" id="loginAlert"></div>
 
-      <div class="demo-role" style="margin-bottom: 1.2rem;">
-        <label>Select Role</label>
-        <div class="seg" id="roleSeg">
-          <button type="button" class="active" data-role="citizen">&#128100; Citizen</button>
-          <button type="button" data-role="staff">&#127963;&#65039; Municipal Staff</button>
-        </div>
-      </div>
-
+      <!-- Primary: Google sign-in (Firebase Auth) -->
       <button class="auth-google" id="googleBtn" type="button" style="width:100%; margin-bottom: 1rem;">
-        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" style="margin-right:8px;">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
           <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
           <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.77 24c0-1.6.27-3.14.76-4.59l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
@@ -89,62 +82,184 @@
         Continue with Google
       </button>
 
+      <div class="auth-divider">OR</div>
+
+      <!-- Alternative: email + password (Firebase Auth) -->
       <form id="emailForm" novalidate>
+        <div class="field hidden" id="fName">
+          <label for="fullName">Full name</label>
+          <input class="input" type="text" id="fullName" placeholder="Your name" autocomplete="name" maxlength="60">
+        </div>
         <div class="field" id="fEmail">
           <label for="email">Email address</label>
-          <input class="input" type="email" id="email" placeholder="you@example.com">
+          <input class="input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
+          <div class="error-text">Enter a valid email address.</div>
         </div>
         <div class="field" id="fPass">
           <label for="password">Password</label>
-          <input class="input" type="password" id="password" placeholder="••••••••">
+          <input class="input" type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+          <div class="error-text">Password must be at least 6 characters.</div>
         </div>
-        <button class="btn btn-primary btn-lg btn-block" type="submit" id="signInBtn">Sign In &amp; Report Issue</button>
+        <div class="link-row"><a href="#" id="forgotLink" class="small">Forgot password?</a></div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" id="signInBtn">Sign in</button>
       </form>
+
+      <p class="center small muted" style="margin-top:1.1rem">
+        <span id="switchText">New to CivicFix?</span> <a href="#" id="createLink">Create an account</a>
+      </p>
+
+      <div class="auth-legal">
+        <a href="#" class="legal">Terms of Service</a>
+        <a href="#" class="legal">Privacy Policy</a>
+        <a href="#" class="legal">Support</a>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="toast-wrap"></div>
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
 (function () {
-  CF.seed();
+  var mode = "signin";           // "signin" | "signup"
+  var googleBtn = CF.$("#googleBtn");
+  var googleHtml = googleBtn.innerHTML;
+  var signInBtn = CF.$("#signInBtn");
+
+  // landing page => open the sign-in modal
   CF.wireModals();
-  var role = "citizen";
-
-  CF.$$("#roleSeg button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      CF.$$("#roleSeg button").forEach(function (x) { x.classList.remove("active"); });
-      b.classList.add("active");
-      role = b.getAttribute("data-role");
-    });
-  });
-
   function openLogin() { CF.openModal("loginModal"); }
   CF.$("#openLoginModalBtn").addEventListener("click", openLogin);
   CF.$("#heroSignInBtn").addEventListener("click", openLogin);
 
-  function go(session) {
-    CF.toast("ok", "Signed in successfully!", session.role === "staff" ? "Opening municipal console..." : "Opening dashboard & report portal...");
-    setTimeout(function () {
-      location.href = session.role === "staff" ? "admin.html" : "dashboard.html";
-    }, 600);
+  // preload firebase sdk so the popup opens inside the click gesture
+  CF.init().catch(function () {});
+
+  /* -------- theme toggle handler -------- */
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  const themeBtn = CF.$("#themeToggleBtn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
   }
 
-  CF.$("#googleBtn").addEventListener("click", function () {
-    var s = role === "staff"
-      ? CF.login("staff", "staff.ops@city.gov", "Municipal Staff")
-      : CF.login("citizen", "user.citizen@gmail.com", "Google User");
-    go(s);
+  /* -------- helpers -------- */
+  function showAlert(msg) {
+    var a = CF.$("#loginAlert");
+    if (!msg) { a.classList.remove("show"); return; }
+    a.textContent = msg;
+    a.classList.add("show");
+  }
+  function resetButtons() {
+    googleBtn.disabled = false;
+    googleBtn.innerHTML = googleHtml;
+    signInBtn.disabled = false;
+    signInBtn.textContent = mode === "signup" ? "Create account" : "Sign in";
+  }
+  function go(session) {
+    CF.toast("ok", "Signed in", session.role === "staff" ? "Opening the municipal console\u2026" : "Opening your dashboard\u2026");
+    setTimeout(function () {
+      CF.navigate(session.role === "staff" ? "admin.html" : "dashboard.html");
+    }, 450);
+  }
+  function fail(err) {
+    resetButtons();
+    var msg = (err && err.status) ? CF.errText(err) : CF.authMessage(err);
+    if (msg) { showAlert(msg); }
+  }
+
+  /* -------- sign-in / sign-up mode switch -------- */
+  function setMode(next) {
+    mode = next;
+    var up = mode === "signup";
+    CF.$("#authTitle").textContent = up ? "Create your account" : "Welcome back";
+    CF.$("#authSub").textContent = up ? "Join CivicFix to report and track issues in your area."
+                                      : "Sign in to report an issue or manage your ward.";
+    CF.$("#fName").classList.toggle("hidden", !up);
+    CF.$("#password").setAttribute("autocomplete", up ? "new-password" : "current-password");
+    CF.$("#forgotLink").classList.toggle("hidden", up);
+    CF.$("#switchText").textContent = up ? "Already have an account?" : "New to CivicFix?";
+    CF.$("#createLink").textContent = up ? "Sign in" : "Create an account";
+    signInBtn.textContent = up ? "Create account" : "Sign in";
+    showAlert("");
+  }
+  CF.$("#createLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    setMode(mode === "signin" ? "signup" : "signin");
   });
 
+  /* -------- Google sign-in (Firebase popup) -------- */
+  googleBtn.addEventListener("click", function () {
+    showAlert("");
+    googleBtn.disabled = true;
+    googleBtn.innerHTML = '<span class="spinner dark"></span> Connecting to Google\u2026';
+    CF.signInGoogle().then(go).catch(fail);
+  });
+
+  /* -------- email + password -------- */
   CF.$("#emailForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    var email = CF.$("#email").value.trim() || "citizen@civicfix.local";
-    var name = email.split("@")[0].replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-    go(CF.login(role, email, name));
+    var email = CF.$("#email").value.trim();
+    var pass  = CF.$("#password").value;
+    var okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    var okPass  = pass.length >= 6;
+
+    CF.$("#fEmail").classList.toggle("invalid", !okEmail);
+    CF.$("#fPass").classList.toggle("invalid", !okPass);
+    if (!okEmail || !okPass) {
+      showAlert("Please fix the highlighted fields and try again.");
+      return;
+    }
+    showAlert("");
+
+    signInBtn.disabled = true;
+    signInBtn.innerHTML = '<span class="spinner"></span> ' + (mode === "signup" ? "Creating account\u2026" : "Signing in\u2026");
+    var job = mode === "signup"
+      ? CF.signUpEmail(CF.$("#fullName").value.trim(), email, pass)
+      : CF.signInEmail(email, pass);
+    job.then(go).catch(fail);
   });
+
+  /* -------- forgot password (Firebase reset email) -------- */
+  CF.$("#forgotLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    var email = CF.$("#email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      CF.$("#fEmail").classList.add("invalid");
+      showAlert("Enter your email address above, then click \u201CForgot password?\u201D again.");
+      return;
+    }
+    showAlert("");
+    CF.resetPassword(email)
+      .then(function () { CF.toast("ok", "Check your inbox", "If an account exists, a reset link is on its way."); })
+      .catch(function (err) { showAlert(CF.authMessage(err)); });
+  });
+
+  /* -------- placeholder links -------- */
+  [[".legal", "Legal", "Terms, privacy and support pages are placeholders in this build."]]
+  .forEach(function (pair) {
+    CF.$$(pair[0]).forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.preventDefault();
+        CF.toast("", pair[1], pair[2]);
+      });
+    });
+  });
+
+  /* -------- already signed in? skip the form -------- */
+  if (!CF.firebaseConfigured()) {
+    showAlert("Firebase is not configured yet. Fill in config.js with your project's web config.");
+    return;
+  }
+  CF.loadSession().then(function (s) { if (s) { go(s); } })
+    .catch(function (err) { showAlert(CF.errText(err)); });
 })();
 </script>
 </body>

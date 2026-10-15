@@ -40,7 +40,8 @@
 
     <div class="admin-bar">
       <strong id="viewTitle" style="font-size:1.05rem;color:var(--ink)">Overview &amp; Analytics</strong>
-      <div class="topbar-search" style="margin-left:auto;max-width:340px">
+      <button class="btn btn-outline btn-sm" id="refreshBtn" type="button" style="margin-left:auto" title="Reload tickets">&#8635; Refresh</button>
+      <div class="topbar-search" style="max-width:340px">
         <span class="ico">&#128269;</span>
         <input class="input" id="adminSearch" type="search" placeholder="Search tickets, addresses, teams…">
       </div>
@@ -270,17 +271,19 @@
 <div class="toast-wrap"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-(function () {
-  var session = CF.requireAuth("staff");
+(async function () {
+  var session = await CF.requireAuth("staff");
   if (!session) { return; }
-  CF.seed();
   CF.paintShell();
   CF.wireDropdowns();
   CF.wireModals();
+  await CF.loadConfig();
 
+  var issues = [];                 // every ticket, from GET /api/admin/issues
+  var loadError = "";
   var activeId = null;
   var q = "", teamFilter = "", listView = "kanban";
   var adminMap = null, adminLayer = null, singleMap = null, singleMarker = null;
@@ -289,18 +292,55 @@
   var teamSel = CF.$("#adminTeamFilter");
   var aTeam = CF.$("#aTeam");
   var sStatus = CF.$("#sStatus");
-  window.MOCK.teams.forEach(function (t) {
-    teamSel.insertAdjacentHTML("beforeend", '<option value="' + t + '">' + t + "</option>");
-    aTeam.insertAdjacentHTML("beforeend", '<option value="' + t + '">' + t + "</option>");
+  CF.teams().forEach(function (t) {
+    var opt = '<option value="' + CF.escapeHtml(t) + '">' + CF.escapeHtml(t) + "</option>";
+    teamSel.insertAdjacentHTML("beforeend", opt);
+    aTeam.insertAdjacentHTML("beforeend", opt);
   });
   CF.STATUSES.forEach(function (s) {
     sStatus.insertAdjacentHTML("beforeend", '<option value="' + s + '">' + s + "</option>");
   });
 
+  /* ---------------- data ---------------- */
+  function getIssue(id) {
+    for (var n = 0; n < issues.length; n++) { if (issues[n].id === id) { return issues[n]; } }
+    return null;
+  }
+  function replaceIssue(updated) {
+    issues = issues.map(function (x) { return x.id === updated.id ? updated : x; });
+  }
+  async function load(showToast) {
+    try {
+      issues = (await CF.adminIssues()).issues;
+      loadError = "";
+      if (showToast) { CF.toast("ok", "Up to date", issues.length + " tickets loaded."); }
+    } catch (e) {
+      loadError = CF.errText(e);
+      CF.toast("err", "Could not load tickets", loadError);
+    }
+    renderAll();
+  }
+  /* PATCH one ticket; shows a busy state on the clicked button; resolves true on success. */
+  async function saveIssue(btn, id, body, okTitle, okMsg) {
+    var label = btn.textContent;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving\u2026';
+    try {
+      replaceIssue(await CF.patchIssue(id, body));
+      renderAll();
+      CF.toast("ok", okTitle, okMsg);
+      return true;
+    } catch (e) {
+      CF.toast("err", "Could not save", CF.errText(e));
+      return false;
+    } finally {
+      btn.disabled = false; btn.textContent = label;
+    }
+  }
+
   /* ---------------- helpers ---------------- */
   function filtered() {
     var s = q.toLowerCase();
-    return CF.getIssues().filter(function (i) {
+    return issues.filter(function (i) {
       if (teamFilter && i.team !== teamFilter) { return false; }
       if (!s) { return true; }
       return (i.id + " " + i.title + " " + i.address + " " + i.team + " " + i.status + " " +
@@ -309,9 +349,9 @@
   }
   function cardHtml(i) {
     var c = CF.catMeta(i.category);
-    return '<article class="kcard" draggable="true" data-id="' + i.id + '">' +
+    return '<article class="kcard" draggable="true" data-id="' + CF.escapeHtml(i.id) + '">' +
       "<h4>" + CF.escapeHtml(i.title) + "</h4>" +
-      '<div class="km"><span class="mono">' + i.id + "</span><span>" + c.icon + " " +
+      '<div class="km"><span class="mono">' + CF.escapeHtml(i.id) + "</span><span>" + c.icon + " " +
         CF.escapeHtml(c.label) + "</span><span>" + CF.escapeHtml(i.priority) + "</span></div>" +
       '<div class="ka">' +
         '<button class="btn btn-outline btn-sm" data-act="assign">Assign Team</button>' +
@@ -354,22 +394,27 @@
     CF.$$(".kcol").forEach(function (c) { c.classList.remove("drag-over"); });
     col.classList.add("drag-over");
   });
-  CF.$("#kanban").addEventListener("drop", function (e) {
+  CF.$("#kanban").addEventListener("drop", async function (e) {
     var col = e.target.closest(".kcol");
     if (!col) { return; }
     e.preventDefault();
     var id = e.dataTransfer.getData("text/plain");
     var status = col.getAttribute("data-status");
-    var issue = CF.getIssue(id);
+    var issue = getIssue(id);
     if (!issue || issue.status === status) { renderAll(); return; }
-    if (status !== "New" && !issue.team) {
-      var guess = window.MOCK.teams[0];
-      CF.assignTeam(id, guess, issue.priority);
-      CF.toast("", "Auto-assigned", "No team was set, so " + guess + " was attached.");
+    if (status === "Assigned" && !issue.team) {   // "Assigned" needs a crew: ask, don't guess
+      CF.toast("", "Pick a team", "Choose a crew to move " + id + " to Assigned.");
+      renderAll();
+      openAssign(id);
+      return;
     }
-    CF.setStatus(id, status);
+    try {
+      replaceIssue(await CF.patchIssue(id, { status: status }));
+      CF.toast("ok", "Status updated", id + " moved to " + status + ".");
+    } catch (err) {
+      CF.toast("err", "Could not move ticket", CF.errText(err));
+    }
     renderAll();
-    CF.toast("ok", "Status updated", id + " moved to " + status + ".");
   });
 
   /* ---------------- table ---------------- */
@@ -378,7 +423,7 @@
     CF.$("#tableBody").innerHTML = list.map(function (i) {
       var c = CF.catMeta(i.category);
       return "<tr>" +
-        '<td class="mono">' + i.id + "</td>" +
+        '<td class="mono">' + CF.escapeHtml(i.id) + "</td>" +
         "<td><strong>" + CF.escapeHtml(i.title) + "</strong>" +
           '<div class="small muted">' + CF.escapeHtml(i.address || "") + "</div></td>" +
         "<td>" + c.icon + " " + CF.escapeHtml(c.label) + "</td>" +
@@ -387,28 +432,29 @@
         "<td>" + CF.escapeHtml(i.team || "—") + "</td>" +
         "<td>" + CF.fmtDate(i.createdAt) + "</td>" +
         '<td><div class="td-actions">' +
-          '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + i.id + '">Assign</button>' +
-          '<button class="btn btn-outline btn-sm" data-act="status" data-id="' + i.id + '">Status</button>' +
-          '<button class="btn btn-outline btn-sm" data-act="map" data-id="' + i.id + '">Map</button>' +
-          '<button class="btn btn-outline btn-sm" data-act="note" data-id="' + i.id + '">Note</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + CF.escapeHtml(i.id) + '">Assign</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="status" data-id="' + CF.escapeHtml(i.id) + '">Status</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="map" data-id="' + CF.escapeHtml(i.id) + '">Map</button>' +
+          '<button class="btn btn-outline btn-sm" data-act="note" data-id="' + CF.escapeHtml(i.id) + '">Note</button>' +
+          '<button class="btn btn-danger btn-sm" data-act="delete" data-id="' + CF.escapeHtml(i.id) + '" title="Delete spam or duplicate">Delete</button>' +
         "</div></td></tr>";
-    }).join("") || '<tr><td colspan="8" class="center muted" style="padding:2rem">No tickets match the current filters.</td></tr>';
+    }).join("") || '<tr><td colspan="8" class="center muted" style="padding:2rem">' + CF.escapeHtml(loadError || "No tickets match the current filters.") + "</td></tr>";
   }
 
   /* ---------------- overview ---------------- */
   function renderOverview() {
-    var all = CF.getIssues();
+    var all = issues;
     var open = all.filter(function (i) { return i.status !== "Closed"; });
     CF.$("#oOpen").textContent = open.length;
     CF.$("#oNew").textContent = all.filter(function (i) { return i.status === "New"; }).length;
-    CF.$("#oCrew").textContent = window.MOCK.teams.filter(function (t) {
+    CF.$("#oCrew").textContent = CF.teams().filter(function (t) {
       return all.some(function (i) { return i.team === t && i.status !== "Closed"; });
     }).length;
     CF.$("#oClosed").textContent = all.filter(function (i) { return i.status === "Closed"; }).length;
     CF.$("#ovTotal").textContent = all.length + " total";
 
     var maxCat = 1;
-    var catRows = window.MOCK.categories.map(function (c) {
+    var catRows = CF.categories().map(function (c) {
       var n = all.filter(function (i) { return i.category === c.id; }).length;
       if (n > maxCat) { maxCat = n; }
       return { label: c.icon + " " + c.label, n: n };
@@ -441,11 +487,11 @@
           return '<div class="issue" style="padding:.8rem 1rem">' +
             '<div class="issue-thumb" style="width:46px;height:46px;font-size:1.2rem">' + c.icon + "</div>" +
             '<div class="issue-main"><h3 style="font-size:.95rem">' + CF.escapeHtml(i.title) + "</h3>" +
-            '<div class="issue-meta"><span class="mono">' + i.id + "</span><span>&#128205; " +
+            '<div class="issue-meta"><span class="mono">' + CF.escapeHtml(i.id) + "</span><span>&#128205; " +
             CF.escapeHtml(i.address) + "</span><span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
             "<span>" + CF.escapeHtml(i.team || "Unassigned") + "</span></div></div>" +
             '<div class="issue-actions">' + CF.badge(i.status) +
-            '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + i.id + '">Assign</button>' +
+            '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + CF.escapeHtml(i.id) + '">Assign</button>' +
             "</div></div>";
         }).join("") + "</div>"
       : '<p class="small muted" style="margin:0">Nothing urgent right now — every high-priority ticket is closed.</p>';
@@ -456,7 +502,7 @@
     var list = filtered();
     CF.$("#mapCount").textContent = list.length + " pins";
     if (!adminMap) {
-      adminMap = CF.makeMap(CF.$("#adminMap"), window.MOCK.defaultCenter, 12, { scrollWheelZoom: true });
+      adminMap = CF.makeMap(CF.$("#adminMap"), CF.defaultCenter(), 12, { scrollWheelZoom: true });
       adminLayer = window.L.layerGroup().addTo(adminMap);
     }
     adminLayer.clearLayers();
@@ -474,8 +520,8 @@
 
   /* ---------------- teams ---------------- */
   function renderTeams() {
-    var all = CF.getIssues();
-    CF.$("#teamGrid").innerHTML = window.MOCK.teams.map(function (t) {
+    var all = issues;
+    CF.$("#teamGrid").innerHTML = CF.teams().map(function (t) {
       var mine = all.filter(function (i) { return i.team === t; });
       var open = mine.filter(function (i) { return i.status !== "Closed"; });
       return '<div class="team-card"><h3>' + CF.escapeHtml(t) + "</h3>" +
@@ -499,16 +545,16 @@
 
   /* ---------------- modal openers ---------------- */
   function openAssign(id) {
-    var i = CF.getIssue(id); if (!i) { return; }
+    var i = getIssue(id); if (!i) { return; }
     activeId = id;
     CF.$("#aSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.title);
-    CF.$("#aTeam").value = i.team || window.MOCK.teams[0];
+    CF.$("#aTeam").value = i.team || CF.teams()[0];
     CF.$("#aPriority").value = i.priority;
     CF.$("#aNote").value = "";
     CF.openModal("assignModal");
   }
   function openStatus(id) {
-    var i = CF.getIssue(id); if (!i) { return; }
+    var i = getIssue(id); if (!i) { return; }
     activeId = id;
     CF.$("#sSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; currently " + i.status;
     CF.$("#sStatus").value = i.status;
@@ -516,7 +562,7 @@
     CF.openModal("statusModal");
   }
   function openMapModal(id) {
-    var i = CF.getIssue(id); if (!i) { return; }
+    var i = getIssue(id); if (!i) { return; }
     activeId = id;
     CF.$("#amTitle").textContent = i.title;
     CF.$("#amSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.address);
@@ -527,7 +573,7 @@
       "<div><dt>Team</dt><dd>" + CF.escapeHtml(i.team || "Unassigned") + "</dd></div>" +
       "<div><dt>Filed</dt><dd>" + CF.fmtDate(i.createdAt, true) + "</dd></div>" +
       "<div><dt>Coordinates</dt><dd class=\"mono\">" + i.lat.toFixed(5) + ", " + i.lng.toFixed(5) + "</dd></div>" +
-      "<div><dt>Reporter</dt><dd>" + CF.escapeHtml(i.reporter || "citizen@demo.gov") + "</dd></div>";
+      "<div><dt>Reporter</dt><dd>" + CF.escapeHtml(i.reporterEmail || "\u2014") + "</dd></div>";
 
     var modal = CF.$("#adminMapModal");
     modal.__onOpen = function () {
@@ -546,13 +592,14 @@
     CF.openModal("adminMapModal");
   }
   function openNote(id) {
-    var i = CF.getIssue(id); if (!i) { return; }
+    var i = getIssue(id); if (!i) { return; }
     activeId = id;
     CF.$("#nSub").innerHTML = '<span class="mono">' + i.id + "</span> &middot; " + CF.escapeHtml(i.title);
     CF.$("#nText").value = "";
     CF.$("#nExisting").innerHTML = (i.notes || []).length
       ? '<ul class="note-list">' + i.notes.map(function (n) {
-          return "<li><b>" + CF.escapeHtml(n.by) + " &middot; " + CF.fmtDate(n.at, true) + "</b>" + CF.escapeHtml(n.text) + "</li>";
+          return "<li><b>" + CF.escapeHtml(n.by) + " &middot; " + CF.fmtDate(n.at, true) +
+                 (n.internal ? " &middot; staff only" : " &middot; visible to reporter") + "</b>" + CF.escapeHtml(n.text) + "</li>";
         }).join("") + "</ul>"
       : '<p class="small muted" style="margin:0">No notes on this ticket yet.</p>';
     CF.openModal("noteModal");
@@ -569,6 +616,7 @@
       if (act === "status") { openStatus(id); }
       if (act === "map") { openMapModal(id); }
       if (act === "note") { openNote(id); }
+      if (act === "delete") { deleteTicket(id); }
       return;
     }
     var t = e.target.closest("[data-team]");
@@ -581,30 +629,44 @@
     }
   });
 
-  /* ---------------- modal saves ---------------- */
-  CF.$("#aSave").addEventListener("click", function () {
-    var note = CF.$("#aNote").value.trim();
-    CF.assignTeam(activeId, CF.$("#aTeam").value, CF.$("#aPriority").value);
-    if (note) { CF.addNote(activeId, note); }
-    CF.closeModal("assignModal");
-    renderAll();
-    CF.toast("ok", "Team assigned", activeId + " dispatched to " + CF.$("#aTeam").value + ".");
+  /* ---------------- modal saves (each is one PATCH) ---------------- */
+  // Dispatch notes are crew instructions -> staff only. Status-change notes are shown to the reporter.
+  CF.$("#aSave").addEventListener("click", async function () {
+    var note = CF.$("#aNote").value.trim(), team = CF.$("#aTeam").value;
+    var body = { team: team, priority: CF.$("#aPriority").value };
+    if (note) { body.note = { text: note, internal: true }; }
+    if (await saveIssue(this, activeId, body, "Team assigned", activeId + " dispatched to " + team + ".")) {
+      CF.closeModal("assignModal");
+    }
   });
-  CF.$("#sSave").addEventListener("click", function () {
+  CF.$("#sSave").addEventListener("click", async function () {
     var st = CF.$("#sStatus").value, note = CF.$("#sNote").value.trim();
-    CF.setStatus(activeId, st, note);
-    CF.closeModal("statusModal");
-    renderAll();
-    CF.toast("ok", "Status updated", activeId + " is now " + st + ".");
+    var body = { status: st };
+    if (note) { body.note = { text: note, internal: false }; }
+    if (await saveIssue(this, activeId, body, "Status updated", activeId + " is now " + st + ".")) {
+      CF.closeModal("statusModal");
+    }
   });
-  CF.$("#nSave").addEventListener("click", function () {
+  CF.$("#nSave").addEventListener("click", async function () {
     var txt = CF.$("#nText").value.trim();
     if (!txt) { CF.toast("err", "Empty note", "Write something before saving."); return; }
-    CF.addNote(activeId, txt, session.name);
-    CF.closeModal("noteModal");
-    renderAll();
-    CF.toast("ok", "Note saved", "Internal note added to " + activeId + ".");
+    if (await saveIssue(this, activeId, { note: { text: txt, internal: true } }, "Note saved", "Internal note added to " + activeId + ".")) {
+      CF.closeModal("noteModal");
+    }
   });
+  async function deleteTicket(id) {
+    var i = getIssue(id);
+    if (!i || !confirm("Permanently delete " + id + " (\u201C" + i.title + "\u201D)? This cannot be undone.")) { return; }
+    try {
+      await CF.deleteIssue(id);
+      issues = issues.filter(function (x) { return x.id !== id; });
+      renderAll();
+      CF.toast("ok", "Ticket deleted", id + " was removed.");
+    } catch (e) {
+      CF.toast("err", "Could not delete", CF.errText(e));
+    }
+  }
+  CF.$("#refreshBtn").addEventListener("click", function () { load(true); });
 
   /* ---------------- navigation ---------------- */
   var TITLES = {
@@ -644,10 +706,11 @@
   CF.$("#adminSearch").addEventListener("input", function () { q = this.value; renderAll(); });
   CF.$("#adminTeamFilter").addEventListener("change", function () { teamFilter = this.value; renderAll(); });
   CF.$("#setSave").addEventListener("click", function () {
-    CF.toast("ok", "Settings saved", "Ward configuration updated locally.");
+    CF.toast("", "Demo only", "These ward settings are not stored on the server yet.");
   });
 
-  renderAll();
+  renderAll();   // empty shell first, then fill from the server
+  load(false);
 })();
 </script>
 </body>

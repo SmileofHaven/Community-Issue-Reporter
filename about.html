@@ -85,11 +85,11 @@
 
 <div class="toast-wrap"></div>
 
-<script src="mockData.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-(function () {
-  var session = CF.requireAuth();
+(async function () {
+  var session = await CF.requireAuth();
   if (!session) { return; }
   CF.paintShell();
   CF.wireDropdowns();
