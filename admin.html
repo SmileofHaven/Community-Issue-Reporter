@@ -63,11 +63,20 @@
 
       <!-- ---------------- OVERVIEW ---------------- -->
       <section class="view" id="view-overview">
+        <div class="ov-toolbar">
+          <div class="view-tabs" id="rangeTabs" role="tablist" aria-label="Time range">
+            <button class="active" data-days="0" type="button">All time</button>
+            <button data-days="30" type="button">Last 30 days</button>
+            <button data-days="7" type="button">Last 7 days</button>
+          </div>
+          <span class="small muted ov-hint">&#128073; Click any card, bar or ticket to drill down</span>
+        </div>
+
         <div class="stats" style="grid-template-columns:repeat(4,1fr)">
-          <div class="stat"><div class="k">Open tickets</div><div class="v" id="oOpen">0</div><div class="d">New + Assigned + In Progress</div></div>
-          <div class="stat warn"><div class="k">Awaiting triage</div><div class="v" id="oNew">0</div><div class="d">Unassigned</div></div>
-          <div class="stat violet"><div class="k">Crews engaged</div><div class="v" id="oCrew">0</div><div class="d">Active teams</div></div>
-          <div class="stat ok"><div class="k">Closed this cycle</div><div class="v" id="oClosed">0</div><div class="d">Resolved tickets</div></div>
+          <button type="button" class="stat clickable" data-goto="open"><div class="k">Open tickets</div><div class="v" id="oOpen">0</div><div class="d">New + Assigned + In Progress <span class="go">View &rarr;</span></div></button>
+          <button type="button" class="stat warn clickable" data-goto="New"><div class="k">Awaiting triage</div><div class="v" id="oNew">0</div><div class="d">Unassigned <span class="go">View &rarr;</span></div></button>
+          <button type="button" class="stat violet clickable" data-goto="teams"><div class="k">Crews engaged</div><div class="v" id="oCrew">0</div><div class="d">Active teams <span class="go">View &rarr;</span></div></button>
+          <button type="button" class="stat ok clickable" data-goto="Closed"><div class="k">Closed this cycle</div><div class="v" id="oClosed">0</div><div class="d">Resolved tickets <span class="go">View &rarr;</span></div></button>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="ov-grid">
@@ -76,19 +85,20 @@
             <div class="card-pad"><div class="bars" id="barsCat"></div></div>
           </div>
           <div class="card">
-            <div class="card-head"><h2>Status breakdown</h2><span class="pill">live</span></div>
+            <div class="card-head"><h2>Status breakdown</h2><span class="pill">click a bar to filter</span></div>
             <div class="card-pad"><div class="bars" id="barsStatus"></div></div>
           </div>
         </div>
 
         <div class="card" style="margin-top:1rem">
-          <div class="card-head"><h2>Needs attention</h2><span class="small muted">High priority, still open</span></div>
+          <div class="card-head"><h2>Needs attention</h2><button type="button" class="btn btn-outline btn-sm" id="urgentAll">View all &rarr;</button></div>
           <div class="card-pad" id="urgentList"></div>
         </div>
       </section>
 
       <!-- ---------------- ALL ISSUES ---------------- -->
       <section class="view hidden" id="view-issues">
+        <div class="active-filters hidden" id="activeFilters"></div>
         <div class="filter-bar">
           <div class="view-tabs" id="viewTabs">
             <button class="active" data-view="kanban">Kanban board</button>
@@ -304,6 +314,7 @@
   var loadError = "";
   var activeId = null;
   var q = "", teamFilter = "", listView = "kanban";
+  var statusFilter = "", catFilter = "", rangeDays = 0;   // set by clicking things on the overview
   var adminMap = null, adminLayer = null, singleMap = null, singleMarker = null;
 
   /* ---------------- filters / selects ---------------- */
@@ -359,7 +370,10 @@
   function filtered() {
     var s = q.toLowerCase();
     return issues.filter(function (i) {
+      if (!inRange(i)) { return false; }
       if (teamFilter && i.team !== teamFilter) { return false; }
+      if (statusFilter === "open" ? i.status === "Closed" : (statusFilter && i.status !== statusFilter)) { return false; }
+      if (catFilter && i.category !== catFilter) { return false; }
       if (!s) { return true; }
       return (i.id + " " + i.title + " " + i.address + " " + i.team + " " + i.status + " " +
               CF.catMeta(i.category).label).toLowerCase().indexOf(s) > -1;
@@ -493,8 +507,13 @@
   }
 
   /* ---------------- overview ---------------- */
+  function inRange(i) {
+    if (!rangeDays) { return true; }
+    var t = new Date(i.createdAt).getTime();
+    return isNaN(t) || (Date.now() - t) <= rangeDays * 86400000;
+  }
   function renderOverview() {
-    var all = issues;
+    var all = issues.filter(inRange);
     var open = all.filter(function (i) { return i.status !== "Closed"; });
     CF.$("#oOpen").textContent = open.length;
     CF.$("#oNew").textContent = all.filter(function (i) { return i.status === "New"; }).length;
@@ -508,13 +527,14 @@
     var catRows = CF.categories().map(function (c) {
       var n = all.filter(function (i) { return i.category === c.id; }).length;
       if (n > maxCat) { maxCat = n; }
-      return { label: c.icon + " " + c.label, n: n };
+      return { id: c.id, label: c.icon + " " + c.label, plain: c.label, n: n };
     });
     CF.$("#barsCat").innerHTML = catRows.map(function (r) {
-      return '<div class="bar-row"><span>' + r.label + "</span>" +
+      return '<button type="button" class="bar-row clickable' + (catFilter === r.id ? " on" : "") + '" data-cat="' + CF.escapeHtml(r.id) +
+        '" title="Show ' + CF.escapeHtml(r.plain) + ' tickets"><span>' + r.label + "</span>" +
         '<span class="bar-track"><span class="bar-fill" style="width:' +
         Math.round((r.n / maxCat) * 100) + '%"></span></span>' +
-        "<span><b>" + r.n + "</b></span></div>";
+        "<span><b>" + r.n + "</b></span></button>";
     }).join("");
 
     var colors = { "New": "#b45309", "Assigned": "#6d28d9", "In Progress": "#1d4ed8", "Closed": "#0f9d58" };
@@ -525,24 +545,26 @@
       return { label: s, n: n, color: colors[s] };
     });
     CF.$("#barsStatus").innerHTML = stRows.map(function (r) {
-      return '<div class="bar-row"><span>' + r.label + "</span>" +
+      return '<button type="button" class="bar-row clickable' + (statusFilter === r.label ? " on" : "") + '" data-status="' + CF.escapeHtml(r.label) +
+        '" title="Show ' + CF.escapeHtml(r.label) + ' tickets"><span>' + r.label + "</span>" +
         '<span class="bar-track"><span class="bar-fill" style="width:' +
         Math.round((r.n / maxSt) * 100) + "%;background:" + r.color + '"></span></span>' +
-        "<span><b>" + r.n + "</b></span></div>";
+        "<span><b>" + r.n + "</b></span></button>";
     }).join("");
 
     var urgent = all.filter(function (i) { return i.priority === "High" && i.status !== "Closed"; });
     CF.$("#urgentList").innerHTML = urgent.length
       ? '<div class="feed">' + urgent.map(function (i) {
           var c = CF.catMeta(i.category);
-          return '<div class="issue" style="padding:.8rem 1rem">' +
+          return '<div class="issue clickable-row" data-open-map="' + CF.escapeHtml(i.id) + '" title="Click to view on map" style="padding:.8rem 1rem">' +
             '<div class="issue-thumb" style="width:46px;height:46px;font-size:1.2rem">' + c.icon + "</div>" +
             '<div class="issue-main"><h3 style="font-size:.95rem">' + CF.escapeHtml(i.title) + "</h3>" +
             '<div class="issue-meta"><span class="mono">' + CF.escapeHtml(i.id) + "</span><span>&#128205; " +
             CF.escapeHtml(i.address) + "</span><span>&#128337; " + CF.timeAgo(i.createdAt) + "</span>" +
             "<span>" + CF.escapeHtml(i.team || "Unassigned") + "</span></div></div>" +
             '<div class="issue-actions">' + CF.badge(i.status) +
-            '<button class="btn btn-outline btn-sm" data-act="assign" data-id="' + CF.escapeHtml(i.id) + '">Assign</button>' +
+            '<button class="btn btn-primary btn-sm" data-act="assign" data-id="' + CF.escapeHtml(i.id) + '">Assign</button>' +
+            '<button class="btn btn-outline btn-sm" data-act="status" data-id="' + CF.escapeHtml(i.id) + '">Status</button>' +
             "</div></div>";
         }).join("") + "</div>"
       : '<p class="small muted" style="margin:0">Nothing urgent right now — every high-priority ticket is closed.</p>';
@@ -589,7 +611,20 @@
     }).join("");
   }
 
+  function renderFilterChips() {
+    var host = CF.$("#activeFilters");
+    var chips = [];
+    if (statusFilter) { chips.push(["status", "Status: " + (statusFilter === "open" ? "Open (not closed)" : statusFilter)]); }
+    if (catFilter) { chips.push(["cat", "Category: " + CF.catMeta(catFilter).label]); }
+    if (teamFilter) { chips.push(["team", "Team: " + teamFilter]); }
+    if (rangeDays) { chips.push(["range", "Last " + rangeDays + " days"]); }
+    host.classList.toggle("hidden", !chips.length);
+    host.innerHTML = chips.map(function (c) {
+      return '<button type="button" class="fchip" data-clear="' + c[0] + '">' + CF.escapeHtml(c[1]) + ' <b>&#10005;</b></button>';
+    }).join("") + (chips.length > 1 ? '<button type="button" class="fchip clear-all" data-clear="all">Clear all</button>' : "");
+  }
   function renderAll() {
+    renderFilterChips();
     renderOverview();
     renderKanban();
     renderTable();
@@ -705,6 +740,52 @@
       renderAll();
       CF.toast("", "Team queue", "Filtered to " + teamFilter + ".");
     }
+  });
+
+  /* ---------------- overview drill-down clicks ---------------- */
+  function goIssues(opts) {
+    statusFilter = opts.status || "";
+    catFilter = opts.cat || "";
+    teamFilter = opts.team !== undefined ? opts.team : teamFilter;
+    CF.$("#adminTeamFilter").value = teamFilter;
+    show("issues");
+    renderAll();
+  }
+  CF.$("#view-overview").addEventListener("click", function (e) {
+    if (e.target.closest("[data-act]")) { return; }          // Assign / Status buttons keep their own handlers
+    var rt = e.target.closest("#rangeTabs button");
+    if (rt) {
+      rangeDays = parseInt(rt.getAttribute("data-days"), 10) || 0;
+      CF.$$("#rangeTabs button").forEach(function (x) { x.classList.toggle("active", x === rt); });
+      renderAll();
+      return;
+    }
+    var card = e.target.closest("[data-goto]");
+    if (card) {
+      var g = card.getAttribute("data-goto");
+      if (g === "teams") { show("teams"); } else { goIssues({ status: g }); }
+      return;
+    }
+    var bar = e.target.closest(".bar-row[data-status]");
+    if (bar) { goIssues({ status: bar.getAttribute("data-status") }); return; }
+    bar = e.target.closest(".bar-row[data-cat]");
+    if (bar) { goIssues({ cat: bar.getAttribute("data-cat") }); return; }
+    if (e.target.closest("#urgentAll")) { goIssues({ status: "open" }); CF.$("#adminSearch").focus(); return; }
+    var row = e.target.closest("[data-open-map]");
+    if (row) { openMapModal(row.getAttribute("data-open-map")); }
+  });
+  CF.$("#activeFilters").addEventListener("click", function (e) {
+    var c = e.target.closest("[data-clear]");
+    if (!c) { return; }
+    var k = c.getAttribute("data-clear");
+    if (k === "status" || k === "all") { statusFilter = ""; }
+    if (k === "cat" || k === "all") { catFilter = ""; }
+    if (k === "team" || k === "all") { teamFilter = ""; CF.$("#adminTeamFilter").value = ""; }
+    if (k === "range" || k === "all") {
+      rangeDays = 0;
+      CF.$$("#rangeTabs button").forEach(function (x) { x.classList.toggle("active", x.getAttribute("data-days") === "0"); });
+    }
+    renderAll();
   });
 
   /* ---------------- modal saves (each is one PATCH) ---------------- */
