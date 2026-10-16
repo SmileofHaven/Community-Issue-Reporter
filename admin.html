@@ -101,7 +101,7 @@
         <div class="active-filters hidden" id="activeFilters"></div>
         <div class="filter-bar">
           <div class="view-tabs" id="viewTabs">
-            <button class="active" data-view="kanban">Kanban board</button>
+            <button class="active" data-view="kanban">Overview board</button>
             <button data-view="table">Data table</button>
           </div>
           <div style="flex:1"></div>
@@ -118,7 +118,7 @@
           <table class="data">
             <thead>
               <tr>
-                <th>ID</th><th>Issue</th><th>Category</th><th>Priority</th>
+                <th>Photo</th><th>ID</th><th>Issue</th><th>Category</th><th>Priority</th>
                 <th>Status</th><th>Team</th><th>Filed</th><th style="text-align:right">Actions</th>
               </tr>
             </thead>
@@ -379,6 +379,35 @@
               CF.catMeta(i.category).label).toLowerCase().indexOf(s) > -1;
     });
   }
+  /* ---------------- photo thumbnails ---------------- */
+  function photoSrc(i) {
+    var p = i && i.photos && i.photos[0];
+    var src = p && (typeof p === "string" ? p : (p.url || p.data));
+    return src ? String(src) : "";
+  }
+  function thumbUrl(src, w, h) {            // Cloudinary can serve a small cropped copy; others stay as-is
+    var m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(?!.*(?:c_fill|w_\d))(.+)$/.exec(src);
+    return m ? m[1] + "c_fill,w_" + w + ",h_" + h + ",q_auto,f_auto/" + m[2] : src;
+  }
+  function thumbHtml(i, cls, w, h) {
+    var src = photoSrc(i), c = CF.catMeta(i.category);
+    var n = (i.photos && i.photos.length) || 0;
+    return '<button type="button" class="thumb ' + cls + (src ? "" : " noimg") + '" data-act="photo" data-id="' + CF.escapeHtml(i.id) +
+      '" title="' + (src ? "View reported photo" : "No photo uploaded") + '" aria-label="View photo for ' + CF.escapeHtml(i.title) + '">' +
+      (src ? '<img src="' + CF.escapeHtml(thumbUrl(src, w, h)) + '" alt="" loading="lazy" draggable="false">' : "") +
+      '<span class="thumb-ph">' + c.icon + (src ? "" : "<small>No photo</small>") + "</span>" +
+      (n > 1 ? '<span class="thumb-count">&#128247; ' + n + "</span>" : "") +
+      "</button>";
+  }
+  // a broken image link falls back to the category-icon placeholder
+  document.addEventListener("error", function (e) {
+    var im = e.target;
+    if (im && im.tagName === "IMG" && im.parentNode && im.parentNode.classList.contains("thumb")) {
+      im.parentNode.classList.add("noimg");
+      im.remove();
+    }
+  }, true);
+
   function cardHtml(i) {
     var c = CF.catMeta(i.category);
     var reporter = (i && typeof i.reporterName === "string" && i.reporterName.trim()) ? i.reporterName.trim() : "Anonymous";
@@ -388,6 +417,7 @@
       ? '<span class="kteam">&#128119; ' + CF.escapeHtml(i.team) + "</span>"
       : '<span class="kteam kteam-none">Unassigned</span>';
     return '<article class="kcard ' + pclass + '" draggable="true" data-id="' + CF.escapeHtml(i.id) + '">' +
+      thumbHtml(i, "thumb-cover", 480, 270) +
       '<div class="kcard-top">' +
         '<span class="kcat">' + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
         '<span class="priChip ' + pclass + '"><i></i>' + CF.escapeHtml(i.priority) + "</span>" +
@@ -487,6 +517,7 @@
     CF.$("#tableBody").innerHTML = list.map(function (i) {
       var c = CF.catMeta(i.category);
       return "<tr>" +
+        "<td>" + thumbHtml(i, "thumb-sm", 120, 120) + "</td>" +
         '<td class="mono">' + CF.escapeHtml(i.id) + "</td>" +
         "<td><strong>" + CF.escapeHtml(i.title) + "</strong>" +
           '<div class="small muted">' + CF.escapeHtml(i.address || "") + "</div></td>" +
@@ -503,7 +534,7 @@
           '<button class="btn btn-outline btn-sm" data-act="note" data-id="' + CF.escapeHtml(i.id) + '">Note</button>' +
           '<button class="btn btn-danger btn-sm" data-act="delete" data-id="' + CF.escapeHtml(i.id) + '" title="Delete spam or duplicate">Delete</button>' +
         "</div></td></tr>";
-    }).join("") || '<tr><td colspan="8" class="center muted" style="padding:2rem">' + CF.escapeHtml(loadError || "No tickets match the current filters.") + "</td></tr>";
+    }).join("") || '<tr><td colspan="9" class="center muted" style="padding:2rem">' + CF.escapeHtml(loadError || "No tickets match the current filters.") + "</td></tr>";
   }
 
   /* ---------------- overview ---------------- */
