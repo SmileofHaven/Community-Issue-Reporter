@@ -17,7 +17,7 @@
   <!-- ============================== SIDEBAR ============================== -->
   <aside class="sidebar">
     <div class="brand-logo">
-      <span class="brand-mark"><img src="assets/civicfix-logo.svg" alt="CivicFix logo"></span><span>CivicFix Ops</span>
+      <span class="brand-mark"><img src="assets/civicfix-logo.svg" alt="CivicFix logo"></span><span>CivicFix</span>
     </div>
 
     <div class="side-label">Workspace</div>
@@ -369,23 +369,33 @@
     var c = CF.catMeta(i.category);
     var reporter = (i && typeof i.reporterName === "string" && i.reporterName.trim()) ? i.reporterName.trim() : "Anonymous";
     var pclass = i.priority === "High" ? "p-high" : i.priority === "Low" ? "p-low" : "p-med";
-    return '<article class="kcard" draggable="true" data-id="' + CF.escapeHtml(i.id) + '">' +
+    var photoCount = (i.photos && i.photos.length) ? i.photos.length : 0;
+    var team = i.team
+      ? '<span class="kteam">&#128119; ' + CF.escapeHtml(i.team) + "</span>"
+      : '<span class="kteam kteam-none">Unassigned</span>';
+    return '<article class="kcard ' + pclass + '" draggable="true" data-id="' + CF.escapeHtml(i.id) + '">' +
       '<div class="kcard-top">' +
         '<span class="kcat">' + c.icon + " " + CF.escapeHtml(c.label) + "</span>" +
-        '<span class="priChip ' + pclass + '">' + CF.escapeHtml(i.priority) + "</span>" +
+        '<span class="priChip ' + pclass + '"><i></i>' + CF.escapeHtml(i.priority) + "</span>" +
       "</div>" +
       "<h4>" + CF.escapeHtml(i.title) + "</h4>" +
+      (i.address ? '<p class="kaddr">&#128205; ' + CF.escapeHtml(i.address) + "</p>" : "") +
+      '<div class="kteam-row">' + team +
+        (photoCount ? '<span class="kphotos">&#128247; ' + photoCount + "</span>" : "") +
+      "</div>" +
       '<div class="km">' +
         '<span class="mono">' + CF.escapeHtml(i.id) + "</span>" +
         '<span class="reporter-chip">&#128100; ' + CF.escapeHtml(reporter) + "</span>" +
         '<span class="filed">&#128337; ' + CF.timeAgo(i.createdAt) + "</span>" +
       "</div>" +
       '<div class="ka">' +
-        '<button class="btn btn-outline btn-sm" data-act="assign">Assign Team</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="status">Change Status</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="map">View on Map</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="photo">&#128247; Photo</button>' +
-        '<button class="btn btn-outline btn-sm" data-act="note">Note</button>' +
+        '<button class="btn btn-primary btn-sm" data-act="assign">Assign</button>' +
+        '<button class="btn btn-outline btn-sm" data-act="status">Status</button>' +
+        '<span class="ka-icons">' +
+          '<button class="kico" data-act="map" title="View on map" aria-label="View on map">&#128506;</button>' +
+          '<button class="kico" data-act="photo" title="View photos" aria-label="View photos">&#128247;</button>' +
+          '<button class="kico" data-act="note" title="Add note" aria-label="Add note">&#128221;</button>' +
+        "</span>" +
       "</div></article>";
   }
 
@@ -394,15 +404,23 @@
     var list = filtered();
     var host = CF.$("#kanban");
     host.classList.add("kanban-v2");
+    var colInfo = {
+      "New":         { icon: "&#128276;", hint: "Waiting for triage" },
+      "Assigned":    { icon: "&#128101;", hint: "Crew allocated" },
+      "In Progress": { icon: "&#128736;", hint: "Work under way" },
+      "Closed":      { icon: "&#9989;",   hint: "Fixed and verified" }
+    };
     host.innerHTML = CF.STATUSES.map(function (st) {
+      var info = colInfo[st] || { icon: "&#128204;", hint: "" };
       var cards = list.filter(function (i) { return i.status === st; });
-      var empty = cards.length
+      var body = cards.length
         ? cards.map(cardHtml).join("")
-        : '<div class="kcard-empty">Drop here</div>';
+        : '<div class="kcard-empty"><span>&#8675;</span>Drop a ticket here</div>';
       return '<div class="kcol" data-status="' + st + '">' +
-        '<div class="kcol-head"><h3><span class="dot"></span>' + st + "</h3>" +
+        '<div class="kcol-head"><div class="kcol-title"><span class="kcol-ico">' + info.icon + "</span>" +
+        "<div><h3>" + st + '</h3><small>' + info.hint + "</small></div></div>" +
         '<span class="kcount">' + cards.length + "</span></div>" +
-        '<div class="kcards">' + empty + "</div></div>";
+        '<div class="kcards">' + body + "</div></div>";
     }).join("");
   }
 
