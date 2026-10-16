@@ -6,6 +6,8 @@ const { parseNewIssue, parseListQuery } = require('../../lib/validate');
 const { serializeIssue } = require('../../lib/serialize');
 const { LIMITS } = require('../../lib/config');
 const geo = require('../../lib/geo');
+const { autoAssign } = require('../../lib/autoassign');
+const { waitUntil } = require('@vercel/functions');
 
 function matchesStatus(status, filter) {
   if (filter === 'open') { return status !== 'Closed'; }
@@ -107,6 +109,9 @@ async function create(req) {
     tx.set(userRef, { uid: user.uid, email: user.email, name: user.name, role: user.role, lastReportAt: now }, { merge: true });
     tx.set(db.doc('issues/' + issueId), doc);
   });
+
+  // ai triage runs after the response => reporter does not wait
+  waitUntil(autoAssign(db, issueId));
 
   return created(serializeIssue(issueId, doc, user));
 }

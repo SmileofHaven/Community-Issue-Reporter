@@ -73,8 +73,11 @@ Errors: `{ "error": "message", "details": { "field": "reason" } }`.
 
 `open` = New / Assigned / In Progress, `fixed` = Closed. Assigning a team to a *New* issue moves it to *Assigned*.
 
+### AI triage (optional)
+With `GEMINI_API_KEY` set, right after `POST /api/issues` responds (reporter does not wait, runs via `waitUntil`) the server asks Gemini to pick category and priority from the text and photos, updates the issue and assigns the crew for that category (status `Assigned`), unless an admin got to it first. Without the key, or if every model fails, the report stays *New* with no team. Admins see the result in `ai` and can still override via `PATCH`. Details: `docs/ai-triage.md`.
+
 ## Data model (Firestore)
-- `issues/{CF-####}`: title, description, category, priority, status, team, address, lat, lng, `geohash`, photos[], notes[], history[], reporterUid, reporterEmail, reporterName, createdAt, updatedAt, closedAt?
+- `issues/{CF-####}`: title, description, category, priority, status, team, address, lat, lng, `geohash`, photos[], notes[], history[], reporterUid, reporterEmail, reporterName, `ai?` ({category,priority,reason,confidence}, admin-only in responses), createdAt, updatedAt, closedAt?
 - `users/{uid}`: uid, email, name, role (mirror of the claim), createdAt, lastReportAt
 - `meta/counters`: `{ issue: <last number> }` for ticket ids
 

@@ -12,6 +12,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@vercel/functions": "^3.10.1",
     "firebase-admin": "^13.10.0",
     "geofire-common": "^6.0.0"
   },
