@@ -444,29 +444,49 @@ table.data tbody tr:hover{background:var(--line)}
 .kcol[data-status="Assigned"] .dot{background:var(--violet)}
 .kcol[data-status="In Progress"] .dot{background:var(--info)}
 .kcol[data-status="Closed"] .dot{background:var(--ok)}
-/* ==================== Kanban v2 (CivicFix redesign) ==================== */
-.kanban-v2{display:grid;grid-template-columns:repeat(4,minmax(280px,1fr));gap:1rem;align-items:start;overflow-x:auto;padding-bottom:.6rem}
-.kanban-v2 .kcol{background:linear-gradient(180deg,var(--kcol-bg),#fff);border:1px solid var(--line);border-radius:16px;padding:.75rem;min-height:240px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
-.kanban-v2 .kcol.drag-over{background:var(--brand-50);border-color:var(--brand);box-shadow:0 0 0 2px rgba(29,78,216,.18) inset}
-.kanban-v2 .kcol-head{align-items:flex-end;padding:.35rem .55rem .8rem;border-bottom:1px solid var(--line-2);margin-bottom:.6rem}
-.kanban-v2 .kcol-head h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--ink)}
-.kanban-v2 .kcount{font-size:.74rem;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:.15rem .55rem;color:var(--body)}
-.kanban-v2 .kcards{display:grid;gap:.7rem;min-height:60px}
-.kanban-v2 .kcard{padding:0;cursor:grab;transition:.16s ease;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 1px 2px rgba(15,23,42,.05);overflow:hidden}
-.kanban-v2 .kcard:hover{transform:translateY(-2px);border-color:#c9d6ee;box-shadow:0 14px 28px rgba(15,23,42,.1)}
-.kanban-v2 .kcard.dragging{opacity:.45;transform:rotate(1.2deg) scale(.98)}
-.kanban-v2 .kcard-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.65rem .85rem .3rem}
-.kanban-v2 .kcat{font-size:.72rem;font-weight:700;color:var(--brand-700);background:var(--brand-50);padding:.15rem .5rem;border-radius:999px;letter-spacing:.02em}
-.kanban-v2 .priChip{font-size:.68rem;font-weight:800;padding:.18rem .55rem;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
-.kanban-v2 .priChip.p-high{background:#fdecec;color:#b91c1c}
-.kanban-v2 .priChip.p-med{background:#fdf3e3;color:#b45309}
-.kanban-v2 .priChip.p-low{background:#eaf1ff;color:#1d4ed8}
-.kanban-v2 .kcard h4{margin:0;padding:0 .85rem .45rem;font-size:.95rem;color:var(--ink);font-weight:700;line-height:1.3}
-.kanban-v2 .km{display:flex;flex-wrap:wrap;gap:.45rem;padding:0 .85rem .7rem;font-size:.74rem;color:var(--muted);align-items:center}
-.kanban-v2 .km .mono{font-weight:700;color:var(--ink)}
-.kanban-v2 .km .filed{display:inline-flex;align-items:center;gap:.25rem}
-.kanban-v2 .ka{display:flex;gap:.3rem;flex-wrap:wrap;padding:.55rem .85rem .75rem;border-top:1px solid var(--line-2);background:var(--card-head-bg)}
-.kanban-v2 .kcard-empty{border:2px dashed var(--line);border-radius:14px;padding:1.8rem 1rem;text-align:center;color:var(--muted);font-size:.78rem;background:transparent}
+/* ==================== Kanban v3 (CivicFix) ==================== */
+.kanban-v2{display:grid;grid-template-columns:repeat(4,minmax(290px,1fr));gap:1.1rem;align-items:start;overflow-x:auto;padding:.2rem .1rem .8rem}
+.kanban-v2 .kcol{--accent:var(--warn);position:relative;background:var(--kcol-bg);border:1px solid var(--line);border-radius:18px;padding:.8rem .7rem .9rem;min-height:260px;box-shadow:var(--shadow-sm);overflow:hidden;transition:background .15s,border-color .15s,box-shadow .15s}
+.kanban-v2 .kcol::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+.kanban-v2 .kcol[data-status="Assigned"]{--accent:var(--violet)}
+.kanban-v2 .kcol[data-status="In Progress"]{--accent:var(--info)}
+.kanban-v2 .kcol[data-status="Closed"]{--accent:var(--ok)}
+.kanban-v2 .kcol.drag-over{background:var(--brand-50);border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.kanban-v2 .kcol-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.35rem .45rem .85rem;margin-bottom:.35rem}
+.kanban-v2 .kcol-title{display:flex;align-items:center;gap:.6rem;min-width:0}
+.kanban-v2 .kcol-ico{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;font-size:1rem;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line))}
+.kanban-v2 .kcol-head h3{margin:0;display:block;font-size:.86rem;letter-spacing:.01em;text-transform:none;font-weight:800;color:var(--ink)}
+.kanban-v2 .kcol-head small{display:block;margin-top:.1rem;font-size:.7rem;color:var(--muted);font-weight:500}
+.kanban-v2 .kcount{min-width:28px;text-align:center;font-size:.76rem;font-weight:800;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:.18rem .6rem;color:var(--accent)}
+.kanban-v2 .kcards{display:grid;gap:.75rem;min-height:60px}
+
+.kanban-v2 .kcard{--pri:var(--warn);position:relative;padding:0;cursor:grab;border:1px solid var(--line);border-left:4px solid var(--pri);border-radius:14px;background:var(--card);box-shadow:var(--shadow-sm);overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.kanban-v2 .kcard.p-high{--pri:var(--danger)}
+.kanban-v2 .kcard.p-med{--pri:var(--warn)}
+.kanban-v2 .kcard.p-low{--pri:var(--info)}
+.kanban-v2 .kcard:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(15,23,42,.14)}
+.kanban-v2 .kcard:active{cursor:grabbing}
+.kanban-v2 .kcard.dragging{opacity:.45;transform:rotate(1.5deg) scale(.98)}
+.kanban-v2 .kcard-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.7rem .85rem .25rem}
+.kanban-v2 .kcat{font-size:.72rem;font-weight:700;color:var(--brand-700);background:var(--brand-50);padding:.18rem .55rem;border-radius:999px}
+.kanban-v2 .priChip{display:inline-flex;align-items:center;gap:.35rem;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--pri)}
+.kanban-v2 .priChip i{width:8px;height:8px;border-radius:50%;background:var(--pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 20%,transparent)}
+.kanban-v2 .kcard h4{margin:0;padding:.1rem .85rem .2rem;font-size:.96rem;line-height:1.3;font-weight:700;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kanban-v2 .kaddr{margin:0;padding:0 .85rem .5rem;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kanban-v2 .kteam-row{display:flex;align-items:center;gap:.5rem;padding:0 .85rem .55rem}
+.kanban-v2 .kteam{font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:999px;background:var(--violet-bg);color:var(--violet)}
+.kanban-v2 .kteam-none{background:transparent;color:var(--muted);border:1px dashed var(--line);font-weight:600}
+.kanban-v2 .kphotos{margin-left:auto;font-size:.72rem;font-weight:700;color:var(--muted)}
+.kanban-v2 .km{display:flex;flex-wrap:wrap;gap:.45rem;padding:.5rem .85rem .6rem;border-top:1px dashed var(--line);font-size:.73rem;color:var(--muted);align-items:center}
+.kanban-v2 .km .mono{font-weight:800;color:var(--ink);letter-spacing:.02em}
+.kanban-v2 .km .filed{margin-left:auto;display:inline-flex;align-items:center;gap:.25rem}
+.kanban-v2 .ka{display:flex;align-items:center;gap:.4rem;padding:.55rem .75rem .7rem;background:var(--card-head-bg);border-top:1px solid var(--line-2)}
+.kanban-v2 .ka .btn{padding:.35rem .8rem;font-size:.76rem}
+.kanban-v2 .ka-icons{margin-left:auto;display:flex;gap:.3rem}
+.kanban-v2 .kico{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:.9rem;line-height:1;transition:.14s}
+.kanban-v2 .kico:hover{background:var(--brand-50);border-color:var(--brand);transform:translateY(-1px)}
+.kanban-v2 .kcard-empty{display:grid;place-items:center;gap:.2rem;border:2px dashed var(--line);border-radius:14px;padding:1.8rem 1rem;text-align:center;color:var(--muted);font-size:.78rem;font-weight:600}
+.kanban-v2 .kcard-empty span{font-size:1.4rem;opacity:.6}
 .reporter-chip{display:inline-flex;align-items:center;gap:.3rem;padding:.12rem .5rem;border-radius:999px;background:linear-gradient(180deg,#eaf1ff,#ffffff);color:var(--brand-700);font-weight:700;font-size:.72rem;border:1px solid #dbe7fb}
 .reporter-chip-mini{display:inline-flex;align-items:center;gap:.25rem;padding:.1rem .45rem;border-radius:999px;background:linear-gradient(180deg,#eaf1ff,#ffffff);color:var(--brand-700);font-weight:700;font-size:.71rem;border:1px solid #dbe7fb}
 @media (max-width:1200px){.kanban-v2{grid-template-columns:repeat(2,minmax(280px,1fr))}}
